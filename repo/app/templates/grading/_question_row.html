@@ -1,0 +1,44 @@
+<section class="card mb-3">
+  <div class="card-body">
+    <h2 class="h6">Q{{ q.id }} — {{ q.stem }}</h2>
+    <p><strong>Student answer:</strong> {{ answer.answer if answer else '-' }}</p>
+
+    {% if q.question_type in ['single_choice','multiple_choice','true_false','fill_in'] %}
+      <p class="mb-1"><strong>Auto result:</strong> {{ grade.status if grade else 'pending' }}</p>
+      <p class="mb-1"><strong>Correct answer:</strong> {{ q.correct_answer }}</p>
+      <p class="mb-2"><strong>Explanation:</strong> {{ q.explanation or '-' }}</p>
+    {% else %}
+      <form hx-post="/grading/attempt/{{ attempt.id }}/question/{{ q.id }}/score" hx-target="#grading-question-{{ q.id }}" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]" class="mb-3">
+        <div class="row g-2">
+          <div class="col-md-3"><input class="form-control" name="score" value="{{ grade.score_awarded if grade else 0 }}"></div>
+          <div class="col-md-3">
+            <button class="btn btn-primary" type="submit">
+              <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+              Save Score
+            </button>
+          </div>
+          <div class="col-md-6"><span class="badge text-bg-primary">{{ grade.status if grade else 'pending' }}</span></div>
+        </div>
+      </form>
+      {% include "grading/_rubric_panel.html" %}
+    {% endif %}
+
+    <form hx-post="/grading/attempt/{{ attempt.id }}/question/{{ q.id }}/comment" hx-target="#comments-{{ q.id }}" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]" class="mb-2">
+      <div class="row g-2">
+        <div class="col-md-8"><input class="form-control" name="comment_text" placeholder="Add comment" required></div>
+        <div class="col-md-2"><label><input type="checkbox" name="is_internal"> internal</label></div>
+        <div class="col-md-2">
+          <button class="btn btn-outline-secondary" type="submit">
+            <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+            Add
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <div id="comments-{{ q.id }}">
+      {% set comments = comment_list if comment_list is defined else comments %}
+      {% include "grading/_comment_thread.html" %}
+    </div>
+  </div>
+</section>

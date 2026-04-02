@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Org Structure{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Administration</p>
+    <h1 class="page-title mb-0">Org Structure</h1>
+    <p class="page-subtitle mb-0">Manage schools, majors, classes, and cohorts.</p>
+  </div>
+</div>
+
+<!-- After any creation the page reloads so all dependent dropdowns stay current -->
+<script>
+  document.addEventListener("htmx:afterRequest", function(e) {
+    if (e.detail.successful && ["POST","PUT"].includes(e.detail.requestConfig.verb.toUpperCase())) {
+      window.location.reload();
+    }
+  });
+</script>
+
+<section class="card mb-3">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    Schools
+  </div>
+  <div class="card-body">
+    <form hx-post="/admin/org/schools" hx-target="#schools-list" hx-swap="innerHTML" class="mb-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label">School Name <span class="text-danger">*</span></label>
+          <input class="form-control" name="name" placeholder="e.g. School of Engineering" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Code</label>
+          <input class="form-control" name="code" placeholder="e.g. SOE">
+        </div>
+        <div class="col-md-2 pt-1">
+          <button class="btn btn-primary w-100" type="submit">Add School</button>
+        </div>
+      </div>
+    </form>
+    <div id="schools-list">{% include "admin/org/_schools_list.html" %}</div>
+  </div>
+</section>
+
+<section class="card mb-3">
+  <div class="card-header">Majors</div>
+  <div class="card-body">
+    {% if not schools %}
+      <div class="alert alert-info py-2 mb-3">Create a school above first, then refresh to add majors.</div>
+    {% endif %}
+    <form hx-post="/admin/org/majors" hx-target="#majors-list" hx-swap="innerHTML" class="mb-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">School <span class="text-danger">*</span></label>
+          <select class="form-select" name="school_id" required {% if not schools %}disabled{% endif %}>
+            <option value="">— select school —</option>
+            {% for s in schools %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Major Name <span class="text-danger">*</span></label>
+          <input class="form-control" name="name" placeholder="e.g. Computer Science" required {% if not schools %}disabled{% endif %}>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Code</label>
+          <input class="form-control" name="code" placeholder="e.g. CS" {% if not schools %}disabled{% endif %}>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Sub-department</label>
+          <select class="form-select" name="sub_department_id" {% if not sub_departments %}disabled{% endif %}>
+            <option value="">— default for school —</option>
+            {% for sd in sub_departments %}<option value="{{ sd.id }}">#{{ sd.id }} {{ sd.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2 pt-1">
+          <button class="btn btn-primary w-100" type="submit" {% if not schools %}disabled{% endif %}>Add Major</button>
+        </div>
+      </div>
+    </form>
+    <div id="majors-list">{% include "admin/org/_majors_list.html" %}</div>
+  </div>
+</section>
+
+<section class="card mb-3">
+  <div class="card-header">Classes</div>
+  <div class="card-body">
+    {% if not majors %}
+      <div class="alert alert-info py-2 mb-3">Create a major above first, then refresh to add classes.</div>
+    {% endif %}
+    <form hx-post="/admin/org/classes" hx-target="#classes-list" hx-swap="innerHTML" class="mb-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Major <span class="text-danger">*</span></label>
+          <select class="form-select" name="major_id" required {% if not majors %}disabled{% endif %}>
+            <option value="">— select major —</option>
+            {% for m in majors %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Class Name <span class="text-danger">*</span></label>
+          <input class="form-control" name="name" placeholder="e.g. Class 2024" required {% if not majors %}disabled{% endif %}>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Year</label>
+          <input class="form-control" name="year" placeholder="e.g. 2024" {% if not majors %}disabled{% endif %}>
+        </div>
+        <div class="col-md-2 pt-1">
+          <button class="btn btn-primary w-100" type="submit" {% if not majors %}disabled{% endif %}>Add Class</button>
+        </div>
+      </div>
+    </form>
+    <div id="classes-list">{% include "admin/org/_classes_list.html" %}</div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-header">Cohorts</div>
+  <div class="card-body">
+    {% if not classes %}
+      <div class="alert alert-info py-2 mb-3">Create a class above first, then refresh to add cohorts.</div>
+    {% endif %}
+    <form hx-post="/admin/org/cohorts" hx-target="#cohorts-list" hx-swap="innerHTML" class="mb-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Class <span class="text-danger">*</span></label>
+          <select class="form-select" name="class_id" required {% if not classes %}disabled{% endif %}>
+            <option value="">— select class —</option>
+            {% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cohort Name <span class="text-danger">*</span></label>
+          <input class="form-control" name="name" placeholder="e.g. Spring 2026" required {% if not classes %}disabled{% endif %}>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Term</label>
+          <input class="form-control" name="internship_term" placeholder="e.g. Spring" {% if not classes %}disabled{% endif %}>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Start Date</label>
+          <input class="form-control" type="date" name="start_date" {% if not classes %}disabled{% endif %}>
+        </div>
+        <div class="col-md-2 pt-1">
+          <button class="btn btn-primary w-100" type="submit" {% if not classes %}disabled{% endif %}>Add Cohort</button>
+        </div>
+      </div>
+    </form>
+    <div id="cohorts-list">{% include "admin/org/_cohorts_list.html" %}</div>
+  </div>
+</section>
+{% endblock %}

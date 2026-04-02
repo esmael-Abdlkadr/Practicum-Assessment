@@ -1,0 +1,23 @@
+{% if can_export %}
+<div class="mb-2">
+  <a class="btn btn-sm btn-outline-secondary" href="/reports/paper/{{ paper_id }}/export/difficulty">Export CSV</a>
+</div>
+{% endif %}
+<div class="table-responsive">
+  <table class="table table-sm table-hover data-table">
+    <thead><tr><th>Question</th><th>Type</th><th>Correct/Attempt</th><th>Difficulty Index</th><th>Flag</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.stem }}</td>
+          <td>{{ r.type }}</td>
+          <td>{{ r.correct_count }}/{{ r.attempt_count }}</td>
+          <td>{{ r.difficulty_index|round(4) }}</td>
+          <td>{{ r.flag }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-3">No data.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

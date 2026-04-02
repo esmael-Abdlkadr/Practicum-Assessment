@@ -1,0 +1,34 @@
+<h2 class="h5 mb-3">Grade Submission</h2>
+<form
+  hx-post="/assignments/grading/{{ submission.id if submission is defined else submission_id }}/grade"
+  hx-target="#grade-form-target"
+  hx-swap="innerHTML"
+  hx-disabled-elt="find button[type=submit]"
+>
+  <div class="row g-2 mb-3">
+    <div class="col-md-4">
+      <label class="form-label">Score</label>
+      <input
+        class="form-control"
+        type="number"
+        name="score"
+        min="0"
+        max="{{ assignment.max_score }}"
+        step="0.5"
+        value="{{ grade.score if grade else '' }}"
+        required
+      >
+    </div>
+    <div class="col-md-8">
+      <label class="form-label">Feedback</label>
+      <textarea class="form-control" name="feedback" rows="4">{{ grade.feedback if grade else '' }}</textarea>
+    </div>
+  </div>
+  <button class="btn btn-primary" type="submit">
+    <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+    Save Grade
+  </button>
+  {% if grade %}
+    <span class="ms-2 text-muted">Last graded at {{ grade.graded_at }}</span>
+  {% endif %}
+</form>

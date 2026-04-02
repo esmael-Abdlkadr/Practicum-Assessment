@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Paper Report{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Analytics</p>
+    <h1 class="page-title mb-0">Report - {{ paper.title }}</h1>
+    <p class="page-subtitle mb-0">Inspect score outcomes, item metrics, and cohort comparisons.</p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-body">
+    <div class="mb-3 d-flex gap-2 flex-wrap">
+      <button class="btn btn-sm btn-outline-secondary" hx-get="/reports/paper/{{ paper.id }}/summary" hx-target="#report-tab" hx-swap="innerHTML">Score Summary</button>
+      <button class="btn btn-sm btn-outline-secondary" hx-get="/reports/paper/{{ paper.id }}/difficulty" hx-target="#report-tab" hx-swap="innerHTML">Item Difficulty</button>
+      <button class="btn btn-sm btn-outline-secondary" hx-get="/reports/paper/{{ paper.id }}/cohort-comparison" hx-target="#report-tab" hx-swap="innerHTML">Cohort Comparison</button>
+      <button class="btn btn-sm btn-outline-secondary" hx-get="/reports/paper/{{ paper.id }}/students" hx-target="#report-tab" hx-swap="innerHTML">Student Detail</button>
+    </div>
+    <div id="report-tab" hx-get="/reports/paper/{{ paper.id }}/summary" hx-trigger="load" hx-swap="innerHTML"></div>
+  </div>
+</section>
+{% endblock %}

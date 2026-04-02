@@ -1,0 +1,38 @@
+<section class="card">
+  <div class="card-body">
+    {% if error_message %}<div class="alert alert-danger" role="alert">{{ error_message }}</div>{% endif %}
+    <form hx-get="/admin/questions" hx-target="#question-list" hx-swap="innerHTML" class="row g-2 mb-3">
+      <div class="col-md-2"><input class="form-control" name="search" value="{{ filters.search }}" placeholder="Search" hx-trigger="keyup changed delay:300ms"></div>
+      <div class="col-md-2"><input class="form-control" name="tag" value="{{ filters.tag }}" placeholder="Tag"></div>
+      <div class="col-md-2"><input class="form-control" name="difficulty" value="{{ filters.difficulty }}" placeholder="Difficulty"></div>
+      <div class="col-md-2"><input class="form-control" name="question_type" value="{{ filters.question_type }}" placeholder="Type"></div>
+      <div class="col-md-2"><button class="btn btn-outline-secondary" type="submit">Filter</button></div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-sm table-hover data-table">
+        <thead><tr><th>ID</th><th>Type</th><th>Stem</th><th>Difficulty</th><th>School</th><th></th></tr></thead>
+        <tbody>
+          {% for q in questions %}
+            <tr>
+              <td>{{ q.id }}</td>
+              <td>{{ q.question_type }}</td>
+              <td>{{ q.stem }}</td>
+              <td>{{ q.difficulty }}</td>
+              <td>{{ q.school_id }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-secondary" hx-delete="/admin/questions/{{ q.id }}" hx-target="#question-list" hx-swap="innerHTML">Delete</button>
+                <button class="btn btn-sm btn-outline-secondary" hx-get="/admin/questions/{{ q.id }}/rubric" hx-target="#rubric-editor-{{ q.id }}" hx-swap="innerHTML">Rubric</button>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="6"><div id="rubric-editor-{{ q.id }}"></div></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-center text-muted py-3">No questions.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

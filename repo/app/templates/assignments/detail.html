@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Assignment Detail{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Assignments</p>
+    <h1 class="page-title mb-0">{{ assignment.title }}</h1>
+    <p class="page-subtitle mb-0">Due: {{ assignment.due_date or '-' }}</p>
+  </div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <p class="mb-0">{{ assignment.description or 'No description provided.' }}</p>
+  </div>
+</section>
+
+<section class="card" id="submission-panel">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Your Submission</h2>
+
+    {% if submission.status in ['submitted', 'graded'] %}
+      <div class="alert alert-success" role="alert">Submission finalized ({{ submission.status }}).</div>
+      <div class="border rounded p-3 mb-3" style="white-space: pre-wrap;">{{ submission.content or '-' }}</div>
+      {% if grade %}
+        <div class="alert alert-info" role="alert">
+          Score: <strong>{{ grade.score }}</strong><br>
+          Feedback: {{ grade.feedback or '-' }}
+        </div>
+      {% endif %}
+    {% else %}
+      <textarea
+        id="submission-content"
+        name="content"
+        class="form-control mb-2"
+        rows="12"
+        hx-post="/assignments/{{ assignment.id }}/save"
+        hx-trigger="keyup changed delay:3s"
+        hx-target="#save-status"
+        hx-swap="outerHTML"
+        hx-include="#submission-content"
+      >{{ submission.content or '' }}</textarea>
+      <div id="save-status" class="text-muted small mb-3">Draft not yet saved.</div>
+      <button
+        class="btn btn-primary"
+        hx-post="/assignments/{{ assignment.id }}/submit"
+        hx-target="#submission-panel"
+        hx-swap="outerHTML"
+        hx-include="#submission-content"
+        hx-disabled-elt="this"
+      >
+        <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+        Submit Assignment
+      </button>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

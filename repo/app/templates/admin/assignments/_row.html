@@ -1,0 +1,33 @@
+<tr id="assignment-row-{{ assignment.id }}">
+  <td>{{ assignment.title }}</td>
+  <td>{{ cohort_name }}</td>
+  <td><span class="badge text-bg-secondary">{{ assignment.status }}</span></td>
+  <td>{{ assignment.due_date or '-' }}</td>
+  <td>{{ assignment.max_score }}</td>
+  <td class="d-flex flex-wrap gap-2">
+    {% if assignment.status == 'draft' %}
+      <button
+        class="btn btn-sm btn-primary"
+        hx-post="/admin/assignments/{{ assignment.id }}/publish"
+        hx-target="#assignment-row-{{ assignment.id }}"
+        hx-swap="outerHTML"
+        hx-disabled-elt="this"
+      >
+        <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+        Publish
+      </button>
+    {% endif %}
+    {% if assignment.status == 'published' %}
+      <button
+        class="btn btn-sm btn-outline-secondary"
+        hx-post="/admin/assignments/{{ assignment.id }}/close"
+        hx-target="#assignment-row-{{ assignment.id }}"
+        hx-swap="outerHTML"
+        hx-disabled-elt="this"
+      >
+        <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+        Close
+      </button>
+    {% endif %}
+  </td>
+</tr>

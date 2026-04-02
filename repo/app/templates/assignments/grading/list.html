@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Assignment Grading{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Grading</p>
+    <h1 class="page-title mb-0">Assignment Grading Queue</h1>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover data-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Assignment</th>
+            <th>Cohort</th>
+            <th>Submitted At</th>
+            <th>Status</th>
+            <th>Grade</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.student.username if row.student else ('#' ~ row.submission.student_id) }}</td>
+              <td>{{ row.assignment.title }}</td>
+              <td>{{ cohort_name_map.get(row.assignment.cohort_id, '#' ~ row.assignment.cohort_id) }}</td>
+              <td>{{ row.submission.submitted_at or '-' }}</td>
+              <td>{{ row.submission.status }}</td>
+              <td>{{ row.grade.score if row.grade else '-' }}</td>
+              <td><a class="btn btn-sm btn-primary" href="/assignments/grading/{{ row.submission.id }}">Grade</a></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7">No submissions ready for grading.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

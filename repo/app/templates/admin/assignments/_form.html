@@ -1,0 +1,41 @@
+<form
+  class="card card-body mb-3 border-0"
+  hx-post="/admin/assignments"
+  hx-target="#assignment-rows"
+  hx-swap="afterbegin"
+  hx-on::after-request="if (event.detail.successful) this.remove()"
+>
+  <div class="row g-2">
+    <div class="col-md-4">
+      <label class="form-label">Title</label>
+      <input class="form-control" name="title" required>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Cohort</label>
+      <select class="form-select" name="cohort_id" required>
+        {% for cohort in cohorts %}
+          <option value="{{ cohort.id }}">{{ cohort.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Due Date</label>
+      <input class="form-control" type="datetime-local" name="due_date">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Max Score</label>
+      <input class="form-control" type="number" step="0.5" min="1" name="max_score" value="100">
+    </div>
+    <div class="col-12">
+      <label class="form-label">Description</label>
+      <textarea class="form-control" name="description" rows="3"></textarea>
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <button type="submit" class="btn btn-primary" hx-disabled-elt="find button[type=submit]">
+        <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+        Create Assignment
+      </button>
+      <button type="button" class="btn btn-outline-secondary" onclick="this.closest('form').remove()">Cancel</button>
+    </div>
+  </div>
+</form>

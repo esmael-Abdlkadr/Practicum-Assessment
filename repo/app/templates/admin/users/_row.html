@@ -1,0 +1,18 @@
+<tr id="user-row-{{ user.id }}">
+  <td class="wrap">{{ user.full_name or user.username }}</td>
+  <td>{{ user.role }}</td>
+  <td>{{ user.last_login_at or '-' }}</td>
+  <td>{% if user.is_active %}active{% else %}inactive{% endif %}{% if user.locked_until %} / locked{% endif %}</td>
+  <td class="d-flex flex-wrap gap-2 wrap">
+    <button class="btn btn-sm btn-outline-secondary" hx-get="/admin/users/{{ user.id }}/edit" hx-target="#edit-slot-{{ user.id }}" hx-swap="innerHTML">Edit</button>
+    {% if user.is_active %}
+      <button class="btn btn-sm btn-outline-secondary" hx-post="/admin/users/{{ user.id }}/deactivate" hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML">Deactivate</button>
+    {% else %}
+      <button class="btn btn-sm btn-outline-secondary" hx-post="/admin/users/{{ user.id }}/activate" hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML">Activate</button>
+    {% endif %}
+    <button class="btn btn-sm btn-outline-secondary" hx-post="/admin/users/{{ user.id }}/reset-password" hx-target="#edit-slot-{{ user.id }}" hx-swap="innerHTML">Reset Password</button>
+    <button class="btn btn-sm btn-outline-secondary" hx-post="/admin/users/{{ user.id }}/unlock" hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML">Unlock</button>
+    <button class="btn btn-sm btn-outline-secondary" hx-get="/admin/users/{{ user.id }}/reveal-student-id" hx-target="#reveal-slot-{{ user.id }}" hx-swap="innerHTML">Reveal ID</button>
+  </td>
+</tr>
+<tr><td colspan="5"><div id="edit-slot-{{ user.id }}"></div><div id="reveal-slot-{{ user.id }}"></div></td></tr>

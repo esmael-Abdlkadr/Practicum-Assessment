@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Cohort Detail{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Cohorts</p>
+    <h1 class="page-title mb-0">Cohort: {{ cohort.name }}</h1>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-body">
+    <div class="info-grid">
+      <div class="info-kpi">
+        <div class="info-kpi-label">Internship Term</div>
+        <div class="info-kpi-value">{{ cohort.internship_term or '-' }}</div>
+      </div>
+      <div class="info-kpi">
+        <div class="info-kpi-label">Cohort ID</div>
+        <div class="info-kpi-value mono">{{ cohort.id }}</div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

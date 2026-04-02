@@ -1,0 +1,26 @@
+<form hx-post="/admin/papers/{{ paper.id }}/publish" hx-target="#paper-publish-status" hx-swap="innerHTML" class="mb-3">
+  <div class="row g-2 mb-2">
+    <div class="col-md-3"><input class="form-control" name="time_limit_min" value="{{ paper.time_limit_min }}"></div>
+    <div class="col-md-3"><input class="form-control" name="max_attempts" value="{{ paper.max_attempts }}"></div>
+    <div class="col-md-3"><input class="form-control" name="available_from" value="{{ paper.available_from or '' }}"></div>
+    <div class="col-md-3"><input class="form-control" name="available_until" value="{{ paper.available_until or '' }}"></div>
+  </div>
+  <div class="row g-2 mb-2">
+    <div class="col-md-2"><label><input type="checkbox" name="randomize" {% if paper.randomize %}checked{% endif %}> randomize</label></div>
+    <div class="col-md-2"><input class="form-control" name="draw_count" value="{{ paper.draw_count or '' }}" placeholder="draw_count"></div>
+    <div class="col-md-4"><input class="form-control" name="draw_tags" value="{{ paper.draw_tags or '' }}" placeholder='["tag"] or tag1,tag2'></div>
+    <div class="col-md-2"><label><input type="checkbox" name="shuffle_options" {% if paper.shuffle_options %}checked{% endif %}> shuffle</label></div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary" hx-disabled-elt="this">
+        <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+        Save Settings
+      </button>
+    </div>
+  </div>
+</form>
+
+<form hx-post="/admin/papers/{{ paper.id }}/close" hx-target="#paper-publish-status" hx-swap="innerHTML">
+  <button class="btn btn-outline-secondary" type="submit">Close Paper</button>
+</form>
+
+<div id="paper-publish-status"></div>

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Permission Templates{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Access Governance</p>
+    <h1 class="page-title mb-0">Permission Templates</h1>
+    <p class="page-subtitle mb-0">Standardize grants and delegate scoped capabilities.</p>
+  </div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <form method="post" action="/admin/permissions/templates" class="mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row">
+        <div class="col-md-3"><input class="form-control" name="name" placeholder="Template name" required></div>
+        <div class="col-md-3"><input class="form-control" name="role" placeholder="Role"></div>
+        <div class="col-md-4"><input class="form-control" name="permissions" placeholder="perm:a,perm:b"></div>
+        <div class="col-md-2"><button class="btn btn-primary" type="submit">Create</button></div>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-hover data-table mb-0">
+        <thead><tr><th>Name</th><th>Role</th><th>Permissions</th></tr></thead>
+        <tbody>
+          {% for t in templates %}
+            <tr>
+              <td>{{ t.name }}</td>
+              <td>{{ t.role or '-' }}</td>
+              <td>{{ t.permissions }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="3" class="text-muted text-center py-3">No templates.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Grant Permission to User</h2>
+    <form method="post" action="/admin/permissions/grant" id="grant-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row mb-2">
+        <div class="col-md-4">
+          <label class="form-label">User</label>
+          <select class="form-control" name="user_id" id="grant-user-select">
+            {% for u in users %}<option value="{{ u.id }}">{{ u.username }} ({{ u.role }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Template</label>
+          <select class="form-control" name="template_id">
+            <option value="">None</option>
+            {% for t in templates %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Custom Permission</label>
+          <input class="form-control" name="permission" placeholder="grade:cohort:42">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4">
+          <label class="form-label small mb-0">Expires At</label>
+          <input class="form-control" type="datetime-local" name="expires_at">
+        </div>
+        <div class="col-md-2"><button class="btn btn-primary" type="submit">Grant</button></div>
+        <div class="col-md-6"><a class="btn btn-outline-secondary" href="/admin/permissions/delegations">Manage Delegations</a></div>
+      </div>
+    </form>
+  </div>
+</section>
+
+{% endblock %}

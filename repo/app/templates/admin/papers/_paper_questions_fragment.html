@@ -1,0 +1,12 @@
+<section class="card">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Paper Questions</h2>
+    <ul class="list-group list-group-flush border rounded">
+      {% for link, q in links %}
+        {% include "admin/papers/_question_row.html" %}
+      {% else %}
+        <li class="list-group-item text-muted">No questions added yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>

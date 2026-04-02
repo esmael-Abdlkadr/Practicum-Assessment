@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Grading Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Grading</p>
+    <h1 class="page-title mb-0">Pending Grading</h1>
+    <p class="page-subtitle mb-0">Submissions requiring manual grading or verification.</p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-body">
+    <ul class="list-group list-group-flush border rounded">
+      {% for item in pending %}
+        <li class="list-group-item">
+          Paper: <a href="/grading/paper/{{ item.paper.id }}">{{ item.paper.title }}</a>
+          — Attempt #{{ item.attempt.id }} — Pending {{ item.pending_count }}
+        </li>
+      {% else %}
+        <li class="list-group-item text-muted">No pending grading items.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}

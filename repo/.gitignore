@@ -1,0 +1,14 @@
+data/fernet.key
+data/*.db
+.pytest_cache/
+:memory:
+*.db-shm
+*.db-wal
+flask_session/
+__pycache__/
+*.pyc
+.env
+.venv/
+.tmp/
+ITERATION_*.md
+OPENCODE_MASTER_PROMPT.md

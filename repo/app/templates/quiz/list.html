@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Assessments{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Assessments</p>
+    <h1 class="page-title mb-0">Available Assessments</h1>
+    <p class="page-subtitle mb-0">Start new attempts or resume in-progress assessments.</p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-body" hx-get="/quiz" hx-trigger="every 60s" hx-target="closest .card-body" hx-swap="outerHTML">
+    <div id="quiz-start-result"></div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover data-table">
+        <thead><tr><th>Title</th><th>Time Limit</th><th>Attempts</th><th>Window</th><th></th></tr></thead>
+        <tbody>
+          {% for p in papers %}
+            <tr>
+              <td>{{ p.title }}</td>
+              <td>{{ p.time_limit_min }} min</td>
+              <td>{{ stats[p.id] }} / {{ p.max_attempts }}</td>
+              <td>{{ p.available_from or '-' }} to {{ p.available_until or '-' }}</td>
+              <td>
+                <button class="btn btn-sm btn-primary" hx-post="/quiz/{{ p.id }}/start" hx-target="#quiz-start-result" hx-swap="innerHTML">Start / Resume</button>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5">No available assessments.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

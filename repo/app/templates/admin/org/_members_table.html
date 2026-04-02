@@ -1,0 +1,23 @@
+<div class="table-responsive">
+  <table class="table table-sm table-hover data-table mb-0">
+    <thead><tr><th>User</th><th>Role in Cohort</th><th></th></tr></thead>
+    <tbody>
+      {% for member, user in members %}
+        <tr>
+          <td>{{ user.username }}</td>
+          <td>{{ member.role_in_cohort }}</td>
+          <td>
+            <button
+              class="btn btn-sm btn-outline-secondary"
+              hx-delete="/admin/org/cohorts/{{ cohort_id }}/members/{{ user.id }}"
+              hx-target="#members-table"
+              hx-swap="innerHTML"
+            >Remove</button>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3" class="text-center text-muted py-3">No members.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

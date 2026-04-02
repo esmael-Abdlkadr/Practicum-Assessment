@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Analytics</p>
+    <h1 class="page-title mb-0">Reports</h1>
+    <p class="page-subtitle mb-0">Open paper analytics with summary and comparison views.</p>
+  </div>
+</div>
+
+{% if filtered_cohort %}
+<div class="alert alert-info d-flex align-items-center justify-content-between mb-3" role="alert">
+  <span>Showing papers for the selected cohort only.</span>
+  <a href="/reports" class="btn btn-sm btn-outline-secondary ms-3">Clear filter</a>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">Available Papers</div>
+  <div class="card-body p-0">
+    <table class="table table-hover data-table mb-0">
+      <thead><tr><th>Paper</th><th></th></tr></thead>
+      <tbody>
+        {% for p in papers %}
+          <tr>
+            <td>{{ p.title }}</td>
+            <td><a class="btn btn-sm btn-outline-primary" href="/reports/paper/{{ p.id }}">Open Report</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="2" class="text-muted text-center py-3">No papers available.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

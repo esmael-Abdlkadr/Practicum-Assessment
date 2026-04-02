@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Re-authentication{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Security</p>
+    <h1 class="page-title mb-0">Re-authentication</h1>
+    <p class="page-subtitle mb-0">Confirm your password for this sensitive action.</p>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <form
+      id="reauth-form"
+      class="card"
+      hx-post="/reauth"
+      hx-target="#reauth-form"
+      hx-swap="outerHTML"
+      method="post"
+    >
+      <div class="card-header">Re-authentication Required</div>
+      <div class="card-body">
+        <p class="text-muted">This action requires you to confirm your password.</p>
+
+        {% if error_message %}
+          <div class="alert alert-danger" role="alert">{{ error_message }}</div>
+        {% endif %}
+
+        <input type="hidden" name="next_url" value="{{ next_url }}">
+
+        <div class="mb-3">
+          <label for="password" class="form-label">Password</label>
+          <input id="password" type="password" name="password" class="form-control" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" hx-disabled-elt="this">
+          <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+          Confirm
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

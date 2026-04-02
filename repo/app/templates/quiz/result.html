@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Result{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Assessments</p>
+    <h1 class="page-title mb-0">Assessment Result</h1>
+  </div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <p class="mb-2">Total score: {{ attempt.score if attempt.score is not none else 'Pending' }}</p>
+    <p class="mb-2">Result: {% if attempt.score is not none and attempt.score >= 60 %}<span class="badge text-bg-success">Pass</span>{% elif attempt.score is not none %}<span class="badge text-bg-warning">Fail</span>{% else %}<span class="badge text-bg-secondary">Pending</span>{% endif %}</p>
+    <p class="mb-0">Time taken: {{ attempt.started_at }} to {{ attempt.finalized_at or attempt.submitted_at or attempt.updated_at }}</p>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Per-question status</h2>
+    <ul class="list-group list-group-flush border rounded">
+      {% for row in results %}
+        <li class="list-group-item">
+          <div class="mb-1"><strong>{{ row.question.stem }}</strong></div>
+          <div>Student answer: {{ row.answer or '-' }}</div>
+          {% if row.question.question_type in ['single_choice','multiple_choice','true_false','fill_in'] %}
+            <div>Correct answer: {{ row.question.correct_answer or '-' }}</div>
+            <div>Awarded points: {{ row.grade.score_awarded if row.grade else 0 }}</div>
+            <div>Explanation: {{ row.question.explanation or '-' }}</div>
+          {% else %}
+            {% if row.pending %}
+              <div>Awaiting grader review</div>
+            {% else %}
+              <div>Grader score: {{ row.grade.score_awarded if row.grade else 0 }}</div>
+            {% endif %}
+          {% endif %}
+          {% if row.comments %}
+            <div class="mt-2">Comments:</div>
+            <ul class="mb-0">
+              {% for c in row.comments %}
+                <li>{{ c.comment_text }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}

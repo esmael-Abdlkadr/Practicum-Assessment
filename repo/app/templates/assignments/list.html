@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Assignments{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Assignments</p>
+    <h1 class="page-title mb-0">My Assignments</h1>
+    <p class="page-subtitle mb-0">Draft and submit published assignment work.</p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-body">
+    <div class="row g-3">
+      {% for assignment in assignments %}
+        <div class="col-md-6">
+          <article class="card h-100 border">
+            <div class="card-body">
+              <h2 class="h5">{{ assignment.title }}</h2>
+              <p class="mb-2 text-muted">Cohort: {{ cohort_name_map.get(assignment.cohort_id, '#' ~ assignment.cohort_id) }}</p>
+              <p class="mb-3">Due: {{ assignment.due_date or '-' }}</p>
+              <a class="btn btn-primary" href="/assignments/{{ assignment.id }}">Start / Continue</a>
+            </div>
+          </article>
+        </div>
+      {% else %}
+        <div class="col-12">
+          <div class="alert alert-info" role="alert">No published assignments available.</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

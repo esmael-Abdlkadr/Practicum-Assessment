@@ -1,0 +1,11 @@
+<h3 class="h6">Schools</h3>
+<ul class="list-group list-group-flush border rounded">
+  {% for school in schools %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <span>{{ school.name }} ({{ school.code or '-' }})</span>
+      {% if not school.is_active %}<span class="badge text-bg-secondary">inactive</span>{% endif %}
+    </li>
+  {% else %}
+    <li class="list-group-item text-muted">No schools</li>
+  {% endfor %}
+</ul>

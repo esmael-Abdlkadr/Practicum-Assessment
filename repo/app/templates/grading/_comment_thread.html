@@ -1,0 +1,39 @@
+<div class="border rounded p-3 bg-light-subtle">
+  <h3 class="h6">Comments</h3>
+  {% macro render_comment(c, depth) %}
+  <li class="mb-1" style="margin-left: {{ depth * 16 }}px">
+    <span class="text-muted small">{{ c.author_id }}</span>
+    {% if c.is_internal %}<span class="badge text-bg-warning">internal</span>{% endif %}
+    <br>{{ c.comment_text }}
+    {% if depth == 0 %}
+    <button class="btn btn-link btn-sm p-0 ms-2"
+            onclick="document.getElementById('reply-to-{{ c.id }}').classList.toggle('d-none')">
+      Reply
+    </button>
+    <div id="reply-to-{{ c.id }}" class="d-none mt-1">
+      <form hx-post="/grading/attempt/{{ c.attempt_id }}/question/{{ c.question_id }}/comment"
+            hx-target="#comment-thread-{{ c.attempt_id }}-{{ c.question_id }}"
+            hx-swap="outerHTML">
+        <input type="hidden" name="parent_id" value="{{ c.id }}">
+        <textarea class="form-control form-control-sm" name="comment_text" rows="2"
+                  placeholder="Reply..."></textarea>
+        <label class="form-check-label small">
+          <input type="checkbox" name="is_internal" class="form-check-input"> Internal
+        </label>
+        <button class="btn btn-sm btn-outline-secondary mt-1" type="submit">Post Reply</button>
+      </form>
+    </div>
+    {% endif %}
+    {% set replies = c.replies.all() %}
+    {% if replies %}
+    <ul class="list-unstyled">
+      {% for r in replies %}{{ render_comment(r, depth + 1) }}{% endfor %}
+    </ul>
+    {% endif %}
+  </li>
+  {% endmacro %}
+  <ul id="comment-thread-{{ comments[0].attempt_id if comments else '' }}-{{ comments[0].question_id if comments else '' }}" class="list-unstyled">
+    {% for c in comments %}{{ render_comment(c, 0) }}
+    {% else %}<li>No comments yet.</li>{% endfor %}
+  </ul>
+</div>

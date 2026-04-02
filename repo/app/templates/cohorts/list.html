@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}My Cohorts{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Cohorts</p>
+    <h1 class="page-title mb-0">My Cohorts</h1>
+    <p class="page-subtitle mb-0">Track assigned terms and jump to reports quickly.</p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-body">
+    {% if cohorts %}
+    <div class="table-responsive">
+      <table class="table table-sm table-hover data-table">
+        <thead><tr><th>Cohort</th><th>Term</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for c in cohorts %}
+          <tr>
+            <td>{{ c.name }}</td>
+            <td>{{ c.internship_term }}</td>
+            <td>{% if c.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+            <td><a class="btn btn-sm btn-outline-primary" href="/reports?cohort_id={{ c.id }}">View Reports</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No cohorts are currently assigned to you.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

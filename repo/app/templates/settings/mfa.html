@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}MFA Settings{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Settings</p>
+    <h1 class="page-title mb-0">MFA Settings</h1>
+    <p class="page-subtitle mb-0">Use offline TOTP verification for stronger login security.</p>
+  </div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <p class="mb-3">
+      Current status:
+      {% if user.mfa_enabled %}
+        <span class="badge text-bg-success">Enabled</span>
+      {% else %}
+        <span class="badge text-bg-secondary">Disabled</span>
+      {% endif %}
+    </p>
+
+    <div id="mfa-setup-area">
+      {% if user.mfa_enabled %}
+        <button class="btn btn-danger" hx-post="/settings/mfa/disable" hx-target="#mfa-setup-area" hx-swap="innerHTML">
+          Disable MFA
+        </button>
+      {% else %}
+        <button class="btn btn-primary" hx-post="/settings/mfa/setup" hx-target="#mfa-setup-area" hx-swap="innerHTML">
+          Enable MFA
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

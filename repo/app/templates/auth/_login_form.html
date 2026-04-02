@@ -1,0 +1,51 @@
+<div class="login-wrapper">
+  <div class="login-card card">
+    <div class="login-logo">
+      <div class="logo-icon">P</div>
+      <h1>Practicum Assessment</h1>
+      <p>Sign in to your account</p>
+    </div>
+
+    <form
+      id="login-form"
+      hx-post="/login"
+      hx-target="#login-form"
+      hx-swap="outerHTML"
+      method="post"
+    >
+      {% if expired_message %}
+        <div class="alert alert-warning mb-3" role="alert">{{ expired_message }}</div>
+      {% endif %}
+
+      {% if error_message %}
+        <div id="login-error" class="alert alert-danger mb-3" role="alert">{{ error_message }}</div>
+      {% else %}
+        <div id="login-error"></div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label for="username" class="form-label">Username</label>
+        <input id="username" name="username" class="form-control form-control-lg" value="{{ username }}" required autofocus>
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input id="password" type="password" name="password" class="form-control form-control-lg" required>
+      </div>
+
+      {% if requires_captcha %}
+        <div class="mb-3">
+          <label for="captcha_answer" class="form-label fw-semibold text-warning">
+            Security check: {{ captcha_question }}
+          </label>
+          <input id="captcha_answer" name="captcha_answer" class="form-control" placeholder="Your answer" required>
+        </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary btn-lg w-100 mt-1" hx-disabled-elt="this">
+        <span class="htmx-indicator spinner-border spinner-border-sm me-1" role="status"></span>
+        Sign In
+      </button>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Papers{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Assessment Management</p>
+    <h1 class="page-title mb-0">Papers</h1>
+    <p class="page-subtitle mb-0">Publishable assessments aligned to specific cohorts.</p>
+  </div>
+  <a class="btn btn-primary" href="/admin/papers/new">+ New Paper</a>
+</div>
+
+<div class="card">
+  <div class="card-header">Paper Library</div>
+  <div class="card-body p-0">
+    <table class="table table-hover data-table mb-0">
+      <thead><tr><th>Title</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for p in papers %}
+          <tr>
+            <td>{{ p.title }}</td>
+            <td><span class="badge text-bg-primary">{{ p.status }}</span></td>
+            <td><a class="btn btn-sm btn-outline-primary" href="/admin/papers/{{ p.id }}">Open</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="text-muted text-center py-3">No papers.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

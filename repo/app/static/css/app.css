@@ -1,0 +1,401 @@
+/* -- Layout -------------------------------------- */
+body {
+  background-color: #F1F5F9;
+  min-height: 100vh;
+  font-size: 0.9375rem;
+  color: #0F172A;
+}
+
+/* -- Navbar --------------------------------------- */
+.navbar {
+  background: #1E293B !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+  padding: 0 1.25rem;
+  min-height: 58px;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -.3px;
+  color: #fff !important;
+}
+
+.navbar .btn-outline-light {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  transition: background .15s, color .15s;
+}
+
+.navbar .btn-outline-light:hover {
+  background: rgba(255, 255, 255, .15);
+}
+
+.navbar .btn-outline-light.active {
+  background: #2563EB;
+  border-color: #2563EB;
+}
+
+/* -- Page wrapper --------------------------------- */
+main.container {
+  max-width: 1200px;
+  padding-top: 1.75rem;
+}
+
+/* -- Cards ---------------------------------------- */
+.card {
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .08), 0 1px 2px rgba(0, 0, 0, .06) !important;
+  background: #fff;
+}
+
+.card-header {
+  background: #fff !important;
+  border-bottom: 1px solid #F1F5F9 !important;
+  font-weight: 600;
+  padding: 1rem 1.5rem;
+  border-radius: 12px 12px 0 0 !important;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-accent {
+  border-left: 4px solid #2563EB !important;
+}
+
+.card-accent-success {
+  border-left: 4px solid #16A34A !important;
+}
+
+.card-accent-warning {
+  border-left: 4px solid #D97706 !important;
+}
+
+/* -- Stat / KPI cards ----------------------------- */
+.stat-card {
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.stat-card .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2563EB;
+  line-height: 1.1;
+}
+
+.stat-card .stat-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: #64748B;
+  margin-top: .25rem;
+}
+
+/* -- Buttons -------------------------------------- */
+.btn-primary {
+  background: #2563EB;
+  border-color: #2563EB;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background: #1D4ED8;
+  border-color: #1D4ED8;
+}
+
+.btn-outline-primary {
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.btn-sm {
+  border-radius: 6px;
+}
+
+/* -- Tables --------------------------------------- */
+.table {
+  font-size: 0.9rem;
+}
+
+.table thead th {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: .5px;
+  color: #64748B;
+  font-weight: 600;
+  border-bottom: 2px solid #E2E8F0;
+  padding: .75rem 1rem;
+}
+
+.table tbody td {
+  padding: .7rem 1rem;
+  vertical-align: middle;
+  border-color: #F1F5F9;
+}
+
+.table-hover tbody tr:hover {
+  background: #F8FAFC;
+}
+
+/* -- Forms ---------------------------------------- */
+.form-control,
+.form-select {
+  border-radius: 8px;
+  border-color: #CBD5E1;
+  font-size: 0.9rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+}
+
+.form-label {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: .35rem;
+}
+
+/* -- Badges --------------------------------------- */
+.badge {
+  font-weight: 500;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  padding: .3em .65em;
+}
+
+/* -- Page title pattern ---------------------------- */
+.page-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: .25rem;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: #64748B;
+  margin-bottom: 1.5rem;
+}
+
+.section-eyebrow {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: #64748B;
+  margin-bottom: .5rem;
+}
+
+/* -- Login page centered layout ------------------- */
+.login-wrapper {
+  min-height: calc(100vh - 60px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .12) !important;
+  padding: 2.5rem;
+}
+
+.login-logo {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.login-logo .logo-icon {
+  width: 52px;
+  height: 52px;
+  background: #2563EB;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: .75rem;
+}
+
+.login-logo h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.login-logo p {
+  font-size: .85rem;
+  color: #64748B;
+  margin: .2rem 0 0;
+}
+
+/* -- Alert strip ---------------------------------- */
+.alert {
+  border-radius: 10px;
+  border: 0;
+  font-size: .875rem;
+}
+
+/* -- Quiz timer ----------------------------------- */
+#quiz-timer {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#quiz-timer.text-danger {
+  color: #DC2626 !important;
+}
+
+/* -- HTMX spinner --------------------------------- */
+.htmx-indicator {
+  display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  display: inline-block;
+}
+
+/* -- Footer --------------------------------------- */
+footer {
+  margin-top: 3rem;
+  color: #94A3B8;
+  font-size: .8rem;
+}
+
+/* -- Sidebar-style nav for wide screens (optional) */
+@media (min-width: 992px) {
+  .navbar .nav-links {
+    gap: .25rem;
+  }
+}
+
+.page-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin: .5rem 0 1.25rem;
+}
+
+.app-panel {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.app-panel-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #F1F5F9;
+  font-weight: 600;
+}
+
+.app-panel-body {
+  padding: 1.25rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.info-kpi {
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: .9rem 1rem;
+  background: linear-gradient(180deg, #fff 0%, #F8FAFC 100%);
+}
+
+.info-kpi-label {
+  color: #64748B;
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.info-kpi-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.data-table td,
+.data-table th {
+  white-space: nowrap;
+}
+
+.data-table td.wrap {
+  white-space: normal;
+}
+
+.soft-note {
+  color: #64748B;
+  font-size: .85rem;
+}
+
+.quiz-topbar {
+  position: sticky;
+  top: .75rem;
+  z-index: 10;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: .65rem .85rem;
+  margin-bottom: .9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
+}
+
+.quiz-shell {
+  display: grid;
+  gap: .85rem;
+  grid-template-columns: 250px 1fr;
+}
+
+.quiz-nav {
+  position: sticky;
+  top: 5.5rem;
+  align-self: start;
+}
+
+.question-chip {
+  min-width: 2.2rem;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 991px) {
+  .info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quiz-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-nav {
+    position: static;
+  }
+}

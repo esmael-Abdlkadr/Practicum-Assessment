@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Temporary Delegations{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Access Governance</p>
+    <h1 class="page-title mb-0">Temporary Delegations</h1>
+    <p class="page-subtitle mb-0">Grant time-bound permissions with explicit scopes.</p>
+  </div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <form method="post" action="/admin/permissions/delegations" class="mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row mb-2">
+        <div class="col-md-3">
+          <label class="form-label">Delegator</label>
+          <select class="form-control" name="delegator_id">
+            {% for u in users %}<option value="{{ u.id }}">{{ u.username }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Delegate</label>
+          <select class="form-control" name="delegate_id">
+            {% for u in users %}<option value="{{ u.id }}">{{ u.username }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3"><label class="form-label">Scope</label><input class="form-control" name="scope" placeholder="cohort:42"></div>
+        <div class="col-md-3"><label class="form-label">Permissions</label><input class="form-control" name="permissions" placeholder="grade:cohort:42"></div>
+      </div>
+      <div class="row">
+        <div class="col-md-4">
+          <label class="form-label">Duration (days, max 30)</label>
+          <input class="form-control" name="expires_in_days" type="number" min="1" max="30" value="7" placeholder="7">
+        </div>
+        <div class="col-md-2"><button class="btn btn-primary" type="submit">Create</button></div>
+        <div class="col-md-6"><a class="btn btn-outline-secondary" href="/admin/permissions/templates">Back to Templates</a></div>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-sm table-hover data-table">
+        <thead><tr><th>Delegator</th><th>Delegate</th><th>Scope</th><th>Permissions</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for d in delegations %}
+            <tr>
+              <td>{{ d.delegator_id }}</td>
+              <td>{{ d.delegate_id }}</td>
+              <td>{{ d.scope }}</td>
+              <td>{{ d.permissions }}</td>
+              <td>{{ d.expires_at }}</td>
+              <td>{% if d.is_active %}active{% else %}inactive{% endif %}</td>
+              <td>
+                {% if d.is_active %}
+                  <button class="btn btn-sm btn-outline-secondary" hx-delete="/admin/permissions/delegations/{{ d.id }}" hx-target="closest tr" hx-swap="outerHTML">Revoke</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7">No delegations.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

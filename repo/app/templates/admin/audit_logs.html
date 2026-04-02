@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Security</p>
+    <h1 class="page-title mb-0">Audit Logs</h1>
+    <p class="page-subtitle mb-0">Search and export tracked security and data actions.</p>
+  </div>
+  <a
+    class="btn btn-outline-secondary"
+    href="/admin/audit-logs/export?actor={{ filters.actor }}&action={{ filters.action }}&resource_type={{ filters.resource_type }}&start_date={{ filters.start_date }}&end_date={{ filters.end_date }}"
+  >Export CSV</a>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <form hx-get="/admin/audit-logs/search" hx-target="#audit-table" hx-swap="innerHTML" class="row g-2">
+      <div class="col-md-3">
+        <input name="actor" class="form-control" placeholder="Actor username" value="{{ filters.actor }}">
+      </div>
+      <div class="col-md-2">
+        <input name="action" class="form-control" placeholder="Action" value="{{ filters.action }}">
+      </div>
+      <div class="col-md-2">
+        <input name="resource_type" class="form-control" placeholder="Resource" value="{{ filters.resource_type }}">
+      </div>
+      <div class="col-md-2">
+        <input type="date" name="start_date" class="form-control" value="{{ filters.start_date }}">
+      </div>
+      <div class="col-md-2">
+        <input type="date" name="end_date" class="form-control" value="{{ filters.end_date }}">
+      </div>
+      <div class="col-md-1 d-grid">
+        <button type="submit" class="btn btn-primary">Search</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div id="audit-table">
+  {% include "admin/_audit_table.html" %}
+</div>
+{% endblock %}

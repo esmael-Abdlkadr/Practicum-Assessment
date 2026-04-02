@@ -1,0 +1,8 @@
+<h3 class="h6">Majors</h3>
+<ul class="list-group list-group-flush border rounded">
+  {% for major in majors %}
+    <li class="list-group-item">{{ major.name }} <span class="text-muted">(school #{{ major.school_id }})</span></li>
+  {% else %}
+    <li class="list-group-item text-muted">No majors</li>
+  {% endfor %}
+</ul>

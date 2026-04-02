@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Administration</p>
+    <h1 class="page-title mb-0">Admin Dashboard</h1>
+    <p class="page-subtitle mb-0">Operational health, security posture, and audit visibility.</p>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3"><div class="card stat-card"><div class="stat-value">{{ active_users }}</div><div class="stat-label">Active Users</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card"><div class="stat-value">{{ locked_accounts }}</div><div class="stat-label">Locked</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card"><div class="stat-value">{{ papers_active }}</div><div class="stat-label">Published Papers</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card"><div class="stat-value">{{ anomaly_unreviewed }}</div><div class="stat-label">Open Anomalies</div></div></div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">System Snapshot</div>
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3 text-muted">Paper Status</dt>
+      <dd class="col-sm-9">active: {{ papers_active }}, draft: {{ papers_draft }}, closed: {{ papers_closed }}</dd>
+      <dt class="col-sm-3 text-muted">Anomaly Alerts</dt>
+      <dd class="col-sm-9">{{ anomaly_unreviewed }} (<a href="/admin/anomalies">view</a>)</dd>
+      <dt class="col-sm-3 text-muted">SQLite Size</dt>
+      <dd class="col-sm-9">{{ db_size }} bytes</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Recent Audit</div>
+  <div class="card-body p-0">
+    <table class="table table-hover data-table mb-0">
+      <thead><tr><th>Time</th><th>Action</th><th>Actor</th></tr></thead>
+      <tbody>
+        {% for row in recent_audit %}
+          <tr>
+            <td>{{ row.created_at }}</td>
+            <td>{{ row.action }}</td>
+            <td>{{ row.actor_username or '-' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="text-muted text-center py-3">No audit records.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

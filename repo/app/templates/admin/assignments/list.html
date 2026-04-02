@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Assignments Admin{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Administration</p>
+    <h1 class="page-title mb-0">Assignment Workflow</h1>
+    <p class="page-subtitle mb-0">Create, publish, and close cohort assignments.</p>
+  </div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="h5 mb-0">Assignment Workflow</h2>
+      <button
+        class="btn btn-primary"
+        hx-get="/admin/assignments/new"
+        hx-target="#assignment-form-target"
+        hx-swap="innerHTML"
+      >
+        New Assignment
+      </button>
+    </div>
+
+    <div id="assignment-form-target"></div>
+
+    <div class="table-responsive">
+      <table class="table table-sm table-hover data-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Cohort</th>
+            <th>Status</th>
+            <th>Due Date</th>
+            <th>Max Score</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="assignment-rows">
+          {% for assignment in assignments %}
+            {% set cohort_name = cohort_name_map.get(assignment.cohort_id, '#' ~ assignment.cohort_id) %}
+            {% include "admin/assignments/_row.html" %}
+          {% else %}
+            <tr><td colspan="6">No assignments yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

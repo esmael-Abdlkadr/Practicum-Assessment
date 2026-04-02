@@ -1,0 +1,4 @@
+<li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+  <span>#{{ q.id }} {{ q.stem }} <span class="text-muted">({{ link.score_points }} pts)</span></span>
+  <button class="btn btn-sm btn-outline-secondary" hx-delete="/admin/papers/{{ paper_id or paper.id }}/questions/{{ q.id }}" hx-target="#paper-questions" hx-swap="innerHTML">Remove</button>
+</li>

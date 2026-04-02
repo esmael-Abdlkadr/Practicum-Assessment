@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users - Practicum{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow">Administration</p>
+    <h1 class="page-title mb-0">Manage Users</h1>
+    <p class="page-subtitle mb-0">Filter, create, and maintain account access in one place.</p>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form class="row g-2 align-items-end" hx-get="/admin/users" hx-target="#users-table" hx-trigger="change from:input, change from:select, keyup changed delay:400ms from:input">
+      <div class="col-md-4">
+        <label class="form-label">Search</label>
+        <input name="search" class="form-control" placeholder="Name or username..." value="{{ request.args.get('search','') }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Role</label>
+        <input name="role" class="form-control" placeholder="Role" value="{{ request.args.get('role','') }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Status</label>
+        <input name="active" class="form-control" placeholder="active or inactive" value="{{ request.args.get('active','') }}">
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">Create or Edit User</div>
+  <div class="card-body">
+    {% include "admin/users/_form.html" %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Users</div>
+  <div class="card-body p-0">
+    <div id="users-table">{% include "admin/users/_rows.html" %}</div>
+  </div>
+</div>
+{% endblock %}

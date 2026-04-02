@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Practicum Assessment System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <script src="{{ url_for('static', filename='vendor/htmx/htmx.min.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/htmx_logger.js') }}" defer></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.addEventListener('htmx:configRequest', function(event) {
+          var token = document.querySelector('meta[name="csrf-token"]');
+          if (token) {
+            event.detail.headers['X-CSRFToken'] = token.getAttribute('content');
+          }
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <div class="container">
+        <a class="navbar-brand" href="{{ url_for('main.home') }}">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#2563EB;border-radius:7px;font-size:.85rem;font-weight:700;margin-right:8px;vertical-align:middle;">P</span>
+          Practicum
+        </a>
+        {% if nav_sections %}
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+          <div class="navbar-nav ms-auto d-flex flex-wrap gap-1 align-items-center nav-links">
+            {% for item in nav_sections %}
+              <a class="btn btn-sm btn-outline-light {% if request.path == item.href %}active{% endif %}" href="{{ item.href }}">{{ item.label }}</a>
+            {% endfor %}
+            <a class="btn btn-sm btn-outline-light ms-1" href="{{ url_for('auth.logout') }}">Logout</a>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </nav>
+
+    <main class="container pb-5">
+      <div id="flash-messages" hx-swap-oob="true">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} mt-3" role="alert">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="border-top py-3 text-center">
+      <small>Offline deployment mode</small>
+    </footer>
+  </body>
+</html>

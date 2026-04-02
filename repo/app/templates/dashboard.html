@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Practicum{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Welcome back</p>
+    <h1 class="page-title mb-0">{{ user.full_name or user.username }}</h1>
+    <p class="page-subtitle mb-0">
+      Role: <span class="badge text-bg-primary">{{ active_role }}</span>
+      {% if active_role != user.role %}
+        <span class="badge text-bg-secondary ms-1">switched from {{ user.role }}</span>
+      {% endif %}
+      &nbsp;·&nbsp; Last login: <span class="text-muted">{{ user.last_login_at or "First login" }}</span>
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('auth.switch_role_page') }}" class="btn btn-outline-primary btn-sm">Switch Role</a>
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+  </div>
+</div>
+
+{% if active_role == 'dept_admin' %}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card stat-card card-accent">
+      <div class="stat-value">{{ admin_counts.schools }}</div>
+      <div class="stat-label">Schools</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card card-accent">
+      <div class="stat-value">{{ admin_counts.majors }}</div>
+      <div class="stat-label">Majors</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card card-accent">
+      <div class="stat-value">{{ admin_counts.cohorts }}</div>
+      <div class="stat-label">Cohorts</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card card-accent">
+      <div class="stat-value">{{ admin_counts.users }}</div>
+      <div class="stat-label">Users</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">Quick Actions</div>
+      <div class="card-body d-flex flex-wrap gap-2">
+        <a href="/admin/org/schools" class="btn btn-outline-primary btn-sm">Org Structure</a>
+        <a href="/admin/questions" class="btn btn-outline-primary btn-sm">Question Bank</a>
+        <a href="/admin/papers" class="btn btn-outline-primary btn-sm">Papers</a>
+        <a href="/admin/users" class="btn btn-outline-primary btn-sm">Manage Users</a>
+        <a href="/reports" class="btn btn-outline-primary btn-sm">Reports</a>
+        <a href="/admin/audit-logs" class="btn btn-outline-secondary btn-sm">Audit Logs</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    Recent Audit Events
+    <a href="/admin/audit-logs" class="btn btn-sm btn-outline-secondary">View All</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover data-table mb-0">
+      <thead><tr><th>Time</th><th>Event</th><th>Actor</th></tr></thead>
+      <tbody>
+        {% for event in recent_audit_events %}
+          <tr>
+            <td class="text-muted small">{{ event.created_at }}</td>
+            <td><span class="badge text-bg-light text-dark">{{ event.action }}</span></td>
+            <td class="small">{{ event.actor_username or "-" }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="text-center text-muted py-3">No recent events</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% elif active_role in ['faculty_advisor', 'corporate_mentor'] %}
+
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="card card-accent-success h-100">
+      <div class="card-header">Pending Grading</div>
+      <div class="card-body">
+        <div class="stat-value text-success">{{ pending_grading_count }}</div>
+        <div class="stat-label">submissions awaiting review</div>
+        <a href="/grading" class="btn btn-sm btn-success mt-3">Go to Grading</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card h-100">
+      <div class="card-header">Assigned Cohorts</div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for cohort in assigned_cohorts %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+              <span>{{ cohort.name }}</span>
+              <a href="/cohorts/{{ cohort.id }}" class="btn btn-sm btn-outline-primary">View</a>
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted px-4 py-3">No assigned cohorts.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% elif active_role == 'student' %}
+
+<div class="row g-3">
+  <div class="col-12">
+    <div class="card card-accent">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        My Assessments
+        <a href="/quiz" class="btn btn-sm btn-primary">Take a Quiz</a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover data-table mb-0">
+          <thead><tr><th>Assessment</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for item in student_assessments %}
+              <tr>
+                <td>{{ item.paper_title or ('Cohort ' ~ item.cohort_id) }}</td>
+                <td>
+                  {% if item.status == 'completed' %}
+                    <span class="badge text-bg-success">{{ item.status }}</span>
+                  {% elif item.status == 'in_progress' %}
+                    <span class="badge text-bg-warning">{{ item.status }}</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary">{{ item.status }}</span>
+                  {% endif %}
+                </td>
+                <td><a href="/quiz" class="btn btn-sm btn-outline-primary">View</a></td>
+              </tr>
+            {% else %}
+              <tr><td colspan="3" class="text-center text-muted py-3">No assessments available.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}

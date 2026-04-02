@@ -1,0 +1,28 @@
+{% if user %}
+<form hx-put="/admin/users/{{ user.id }}" hx-target="#users-table" hx-swap="innerHTML" class="mb-3">
+  <div class="row g-2 mb-2">
+    <div class="col-md-3"><input class="form-control" name="username" value="{{ user.username }}" disabled></div>
+    <div class="col-md-3"><input class="form-control" name="full_name" value="{{ user.full_name or '' }}" placeholder="Full name"></div>
+    <div class="col-md-3"><input class="form-control" name="email" value="{{ user.email or '' }}" placeholder="Email"></div>
+    <div class="col-md-3"><input class="form-control" name="role" value="{{ user.role }}" placeholder="Role"></div>
+  </div>
+  <div class="row g-2 mb-2">
+    <div class="col-md-4"><input class="form-control" name="student_id" placeholder="Update student ID"></div>
+    <div class="col-md-4"><button class="btn btn-primary" type="submit">Save User</button></div>
+  </div>
+</form>
+{% else %}
+<form hx-post="/admin/users" hx-target="#users-table" hx-swap="innerHTML" class="mb-3">
+  <div class="row g-2 mb-2">
+    <div class="col-md-3"><input class="form-control" name="username" placeholder="Username" required></div>
+    <div class="col-md-3"><input class="form-control" name="full_name" placeholder="Full name"></div>
+    <div class="col-md-3"><input class="form-control" name="email" placeholder="Email"></div>
+    <div class="col-md-3"><input class="form-control" name="role" placeholder="Role"></div>
+  </div>
+  <div class="row g-2 mb-2">
+    <div class="col-md-4"><input class="form-control" name="password" placeholder="Password (optional)"></div>
+    <div class="col-md-4"><input class="form-control" name="student_id" placeholder="Student ID (for students)"></div>
+    <div class="col-md-4"><button class="btn btn-primary" type="submit">Create User</button></div>
+  </div>
+</form>
+{% endif %}

@@ -1,0 +1,30 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Wrapper-level temp
+.tmp/
+
+# Repo-local env/temp/runtime artifacts
+repo/.env
+repo/.venv/
+repo/.pytest_cache/
+repo/flask_session/
+repo/.tmp/
+
+# SQLite/database artifacts
+repo/data/*.db
+repo/data/fernet.key
+repo/*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.idea/
+.vscode/
+*.swp

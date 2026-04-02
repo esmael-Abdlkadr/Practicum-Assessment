@@ -1,0 +1,14 @@
+<h3 class="h6">Cohorts</h3>
+<ul class="list-group list-group-flush border rounded">
+  {% for cohort in cohorts %}
+    <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+      <span>
+        <a href="/cohorts/{{ cohort.id }}">{{ cohort.name }}</a>
+        <span class="text-muted">(class #{{ cohort.class_id }}, {{ cohort.internship_term or '-' }})</span>
+      </span>
+      <a class="btn btn-sm btn-outline-secondary" href="/admin/org/cohorts/{{ cohort.id }}/members">Members</a>
+    </li>
+  {% else %}
+    <li class="list-group-item text-muted">No cohorts</li>
+  {% endfor %}
+</ul>

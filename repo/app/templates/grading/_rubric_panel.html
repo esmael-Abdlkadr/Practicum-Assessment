@@ -1,0 +1,15 @@
+<details class="mb-2 p-2 border rounded bg-light-subtle">
+  <summary>Rubric guidance</summary>
+  <div class="mt-2">
+    {% if rubric and rubric.criteria %}
+      {% set items = rubric.criteria|fromjson %}
+      <ul>
+        {% for item in items %}
+          <li>{{ item.level }} ({{ item.points }}): {{ item.description }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="mb-0 text-muted">No rubric configured for this question.</p>
+    {% endif %}
+  </div>
+</details>

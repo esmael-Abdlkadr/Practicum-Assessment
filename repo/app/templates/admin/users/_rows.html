@@ -1,0 +1,12 @@
+<div class="table-responsive">
+  <table class="table table-sm table-hover data-table mb-0">
+    <thead><tr><th>Name</th><th>Role</th><th>Last Login</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for user in users %}
+        {% include "admin/users/_row.html" %}
+      {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-3">No users.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

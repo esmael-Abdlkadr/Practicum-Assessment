@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Take Assessment{% endblock %}
+
+{% block content %}
+<div class="quiz-topbar">
+  <span class="fw-bold">Time Remaining: <span id="quiz-timer" data-paper-id="{{ paper.id }}" data-seconds-remaining="{{ time_remaining }}"><span id="timer-display">{{ time_remaining | format_time }}</span></span></span>
+  <span id="autosave-status" class="soft-note">Autosave ready</span>
+  <button class="btn btn-success btn-sm" type="submit" form="quiz-submit-form" id="submit-btn">Submit Quiz</button>
+</div>
+
+<form id="quiz-submit-form"
+      hx-post="/quiz/{{ paper.id }}/submit"
+      hx-target="#submit-result"
+      hx-swap="outerHTML"
+      hx-confirm="Are you sure you want to submit? You cannot change your answers after submission.">
+  <input type="hidden" name="submission_token" value="{{ attempt.submission_token }}">
+
+  <div id="autosave-poller"
+       hx-post="/quiz/{{ paper.id }}/autosave"
+       hx-trigger="every 15s"
+       hx-include="#quiz-submit-form [name^='answer_']"
+       hx-target="#autosave-indicator"
+       hx-swap="outerHTML"></div>
+  <span id="autosave-indicator" class="d-none"></span>
+
+  <div class="quiz-shell">
+    <div class="quiz-nav">
+      <div class="card">
+        <div class="card-header">Questions</div>
+        <div class="card-body d-flex flex-wrap gap-1">
+          {% for q in questions %}
+            {% set saved = saved_answers.get(q.id) %}
+            <a class="btn btn-sm question-chip {% if saved %}btn-success{% else %}btn-outline-primary{% endif %}" href="#q-{{ q.id }}">{{ loop.index }}</a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div>
+      {% for q in questions %}
+        <div class="card mb-3" id="q-{{ q.id }}">
+          <div class="card-header">Question {{ loop.index }}</div>
+          <div class="card-body">
+            <h2 class="h5 mb-3">{{ q.stem }}</h2>
+            {% set saved = saved_answers.get(q.id) %}
+            {% if q.question_type == 'single_choice' %}
+              {% for opt in q.options and (q.options|fromjson) or [] %}
+                <label class="d-block mb-2"><input type="radio" name="answer_{{ q.id }}" value="{{ opt.key }}" {% if saved == opt.key %}checked{% endif %}> {{ opt.key }}. {{ opt.text }}</label>
+              {% endfor %}
+            {% elif q.question_type == 'multiple_choice' %}
+              {% set selected = saved and (saved|fromjson) or [] %}
+              {% for opt in q.options and (q.options|fromjson) or [] %}
+                <label class="d-block mb-2"><input type="checkbox" name="answer_{{ q.id }}" value="{{ opt.key }}" {% if opt.key in selected %}checked{% endif %}> {{ opt.key }}. {{ opt.text }}</label>
+              {% endfor %}
+            {% elif q.question_type == 'true_false' %}
+              <label class="d-block mb-2"><input type="radio" name="answer_{{ q.id }}" value="True" {% if saved == 'True' %}checked{% endif %}> True</label>
+              <label class="d-block mb-2"><input type="radio" name="answer_{{ q.id }}" value="False" {% if saved == 'False' %}checked{% endif %}> False</label>
+            {% elif q.question_type == 'fill_in' %}
+              <input class="form-control" name="answer_{{ q.id }}" value="{{ saved or '' }}">
+            {% else %}
+              <textarea class="form-control" name="answer_{{ q.id }}" rows="5">{{ saved or '' }}</textarea>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</form>
+
+<div id="submit-result"></div>
+
+<script src="{{ url_for('static', filename='js/quiz_timer.js') }}"></script>
+{% endblock %}

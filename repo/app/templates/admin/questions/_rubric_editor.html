@@ -1,0 +1,6 @@
+<form hx-post="/admin/questions/{{ question.id }}/rubric" hx-target="#rubric-editor-{{ question.id }}" hx-swap="innerHTML" class="mb-2 p-3 border rounded bg-light-subtle">
+  <label class="form-label">Rubric criteria JSON</label>
+  <textarea class="form-control" name="criteria" rows="5">{{ rubric.criteria if rubric else '[{"level":"Full","points":5,"description":"Complete and correct"}]' }}</textarea>
+  <button class="btn btn-sm btn-primary mt-2" type="submit">Save Rubric</button>
+</form>
+{% if success_message %}<div class="alert alert-success" role="alert">{{ success_message }}</div>{% endif %}

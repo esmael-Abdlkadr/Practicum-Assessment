@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Paper Builder{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Assessment Management</p>
+    <h1 class="page-title mb-0">Paper Builder - {{ paper.title }}</h1>
+    <p class="page-subtitle mb-0">Tune settings and curate question composition.</p>
+  </div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    {% include "admin/papers/_settings_form.html" %}
+  </div>
+</section>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Add Question</h2>
+    <form hx-post="/admin/papers/{{ paper.id }}/questions" hx-target="#paper-questions" hx-swap="innerHTML">
+      <div class="row g-2 mb-2">
+        <div class="col-md-8">
+          <select class="form-control" name="question_id">
+            {% for q in bank %}
+              <option value="{{ q.id }}">#{{ q.id }} [{{ q.question_type }}] {{ q.stem }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2"><input class="form-control" name="score_points" value="1.0"></div>
+        <div class="col-md-2"><button class="btn btn-primary" type="submit">Add</button></div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div id="paper-questions">
+  {% include "admin/papers/_paper_questions_fragment.html" %}
+</div>
+{% endblock %}

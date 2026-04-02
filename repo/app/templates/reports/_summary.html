@@ -1,0 +1,22 @@
+<div>
+  <div class="mb-2">
+    {% if can_export %}
+    <a class="btn btn-sm btn-outline-secondary" href="/reports/paper/{{ data.paper.id }}/export/summary">Export CSV</a>
+    {% endif %}
+  </div>
+  <div class="info-grid mb-3">
+    <div class="info-kpi"><div class="info-kpi-label">Total Assigned</div><div class="info-kpi-value mono">{{ data.total_assigned }}</div></div>
+    <div class="info-kpi"><div class="info-kpi-label">Attempted</div><div class="info-kpi-value mono">{{ data.attempted }}</div></div>
+    <div class="info-kpi"><div class="info-kpi-label">Submitted</div><div class="info-kpi-value mono">{{ data.submitted }}</div></div>
+    <div class="info-kpi"><div class="info-kpi-label">Pass Rate</div><div class="info-kpi-value mono">{{ (data.pass_rate * 100)|round(2) }}%</div></div>
+  </div>
+  <p>Average: {{ data.average_score }}</p>
+  <p>Highest: {{ data.highest_score }}</p>
+  <p>Lowest: {{ data.lowest_score }}</p>
+  <h3 class="h6">Distribution</h3>
+  <ul>
+    {% for bucket, count in data.distribution.items() %}
+      <li>{{ bucket }}: {{ count }}</li>
+    {% endfor %}
+  </ul>
+</div>

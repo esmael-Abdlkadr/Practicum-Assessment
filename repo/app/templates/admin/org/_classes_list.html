@@ -1,0 +1,8 @@
+<h3 class="h6">Classes</h3>
+<ul class="list-group list-group-flush border rounded">
+  {% for c in classes %}
+    <li class="list-group-item">{{ c.name }} <span class="text-muted">(major #{{ c.major_id }}, {{ c.year or '-' }})</span></li>
+  {% else %}
+    <li class="list-group-item text-muted">No classes</li>
+  {% endfor %}
+</ul>

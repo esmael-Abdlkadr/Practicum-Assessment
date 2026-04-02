@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Grade Attempt{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Grading</p>
+    <h1 class="page-title mb-0">Grade Attempt #{{ attempt.id }}</h1>
+    <p class="page-subtitle mb-0">{{ paper.title }} · Current score: {{ attempt.score if attempt.score is not none else '-' }}</p>
+  </div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <p class="mb-0 soft-note">Review each response and finalize manual scoring where required.</p>
+  </div>
+</section>
+
+{% for link, q in rows %}
+  {% set answer = answers.get(q.id) %}
+  {% set grade = grading.get(q.id) %}
+  {% set rubric = rubrics.get(q.id) %}
+  {% set comment_list = comments.get(q.id, []) %}
+  <div id="grading-question-{{ q.id }}">
+    {% include "grading/_question_row.html" %}
+  </div>
+{% endfor %}
+{% endblock %}

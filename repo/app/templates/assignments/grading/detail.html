@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Grade Assignment Submission{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="section-eyebrow mb-1">Grading</p>
+    <h1 class="page-title mb-0">{{ assignment.title }}</h1>
+    <p class="page-subtitle mb-0">Submission #{{ submission.id }}</p>
+  </div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <p class="text-muted mb-0">Review content and apply scoring rubric.</p>
+  </div>
+</section>
+
+<section class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5">Student Submission</h2>
+    <div class="border rounded p-3" style="white-space: pre-wrap;">{{ submission.content or '-' }}</div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-body" id="grade-form-target">
+    {% include "assignments/grading/_grade_form.html" %}
+  </div>
+</section>
+{% endblock %}
