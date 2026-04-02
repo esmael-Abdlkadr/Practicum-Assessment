@@ -11,6 +11,10 @@ fi
 
 PYTHON_BIN=".venv/bin/python"
 
+# Provide safe defaults when validator does not inject .env values.
+export SECRET_KEY="${SECRET_KEY:-practicum-dev-secret-key-change-in-production}"
+export DATABASE_URL="${DATABASE_URL:-sqlite:///data/practicum.db}"
+
 echo "Installing test dependencies..."
 "$PYTHON_BIN" -m pip install -q -r requirements-test.txt
 
