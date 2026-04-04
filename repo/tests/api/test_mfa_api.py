@@ -17,19 +17,18 @@ def test_mfa_setup_page_returns_200(client, admin_user):
 def test_mfa_setup_generates_secret(client, app, admin_user):
     _login(client)
     client.post("/settings/mfa/setup")
-    with app.app_context():
-        admin = User.query.filter_by(username="admin").first()
-        user = db.session.get(User, admin.id)
-        assert user.mfa_secret is not None
+    # After the fix, setup no longer writes to DB — secret lives in session only
+    with client.session_transaction() as sess:
+        assert sess.get("mfa_setup_secret") is not None
 
 
 def test_mfa_verify_setup_with_valid_totp(client, app, admin_user):
     _login(client)
     client.post("/settings/mfa/setup")
-    with app.app_context():
-        admin = User.query.filter_by(username="admin").first()
-        user = db.session.get(User, admin.id)
-        secret = user.mfa_secret
+    # Secret is now only in session, not DB
+    with client.session_transaction() as sess:
+        secret = sess.get("mfa_setup_secret")
+    assert secret is not None
     totp = pyotp.TOTP(secret).now()
     res = client.post("/settings/mfa/verify-setup", data={"totp_code": totp}, follow_redirects=False)
     assert res.status_code in (200, 302, 204)
@@ -136,9 +135,10 @@ def test_mfa_enable_writes_audit_log(client, app, admin_user):
 
     _login(client)
     client.post("/settings/mfa/setup")
-    with app.app_context():
-        admin = User.query.filter_by(username="admin").first()
-        secret = db.session.get(User, admin.id).mfa_secret
+    # Secret is now only in session, not DB
+    with client.session_transaction() as sess:
+        secret = sess.get("mfa_setup_secret")
+    assert secret is not None
     totp = pyotp.TOTP(secret).now()
     res = client.post("/settings/mfa/verify-setup", data={"totp_code": totp}, follow_redirects=False)
     assert res.status_code in (200, 302, 204)
@@ -148,14 +148,59 @@ def test_mfa_enable_writes_audit_log(client, app, admin_user):
         assert row is not None
 
 
+def test_mfa_setup_does_not_disable_active_mfa(client, app, admin_user):
+    """Regression: hitting /settings/mfa/setup must NOT set mfa_enabled=False for a user
+    who already has MFA enabled.  The persisted mfa_enabled state must remain True
+    until the user explicitly disables via the /disable endpoint (which requires re-auth)."""
+    with app.app_context():
+        secret = pyotp.random_base32()
+        u = User.query.filter_by(username="admin").first()
+        u.mfa_secret = secret
+        u.mfa_enabled = True
+        db.session.commit()
+
+    _login(client)
+    client.post("/settings/mfa/setup")
+
+    with app.app_context():
+        u = User.query.filter_by(username="admin").first()
+        assert u.mfa_enabled is True, (
+            "mfa_enabled must remain True after hitting /setup; "
+            "only /disable (with re-auth) should set it to False."
+        )
+
+
+def test_mfa_setup_stores_pending_secret_only_in_session(client, app, admin_user):
+    """The new temp secret generated during setup must NOT be committed to the DB;
+    only the session should carry the pending secret until verify-setup succeeds."""
+    with app.app_context():
+        original_secret = pyotp.random_base32()
+        u = User.query.filter_by(username="admin").first()
+        u.mfa_secret = original_secret
+        u.mfa_enabled = True
+        db.session.commit()
+
+    _login(client)
+    client.post("/settings/mfa/setup")
+
+    with app.app_context():
+        u = User.query.filter_by(username="admin").first()
+        # The persisted secret must still be the original one, not a new temp secret
+        assert u.mfa_secret == original_secret, (
+            "DB mfa_secret must not change during setup initiation; "
+            "new secret should stay in session only until verify-setup."
+        )
+
+
 def test_mfa_disable_writes_audit_log(client, app, admin_user):
     from app.models.audit_log import AuditLog
 
     _login(client)
     client.post("/settings/mfa/setup")
-    with app.app_context():
-        admin = User.query.filter_by(username="admin").first()
-        secret = db.session.get(User, admin.id).mfa_secret
+    # Secret is now only in session, not DB
+    with client.session_transaction() as sess:
+        secret = sess.get("mfa_setup_secret")
+    assert secret is not None
     totp = pyotp.TOTP(secret).now()
     client.post("/settings/mfa/verify-setup", data={"totp_code": totp}, follow_redirects=False)
 

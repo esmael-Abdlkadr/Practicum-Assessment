@@ -1,0 +1,46 @@
+{% if scan_message %}
+<div class="alert alert-info" role="alert">{{ scan_message }}</div>
+{% endif %}
+<div class="table-responsive">
+  <table class="table table-sm table-hover align-middle data-table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Anomaly Type</th>
+        <th>Detected At</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in anomalies %}
+        <tr>
+          <td>{{ row.username }}</td>
+          <td>{{ row.anomaly_type }}</td>
+          <td>{{ row.detected_at }}</td>
+          <td id="anomaly-status-{{ row.id }}">
+            {% if row.reviewed %}
+              <span class="badge text-bg-success">reviewed</span>
+            {% else %}
+              <span class="badge text-bg-warning">unreviewed</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not row.reviewed %}
+              <button
+                class="btn btn-sm btn-outline-primary"
+                hx-post="/admin/anomalies/{{ row.id }}/review"
+                hx-target="#anomaly-status-{{ row.id }}"
+                hx-swap="innerHTML"
+              >Mark Reviewed</button>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="5" class="text-muted">No anomaly flags detected.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

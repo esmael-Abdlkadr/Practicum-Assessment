@@ -563,3 +563,208 @@ def test_anomaly_review_writes_audit_log(client, app, admin_user):
     with app.app_context():
         row = AuditLog.query.filter_by(action="ANOMALY_FLAG_REVIEWED", resource_id=str(fid)).first()
         assert row is not None
+
+
+# ---------------------------------------------------------------------------
+# Delegation scope normalization + effect tests  (audit finding #2 + #4)
+# ---------------------------------------------------------------------------
+
+def _reauth_session(client, action_name):
+    with client.session_transaction() as sess:
+        sess.setdefault("reauth_confirmed", {})
+        sess["reauth_confirmed"][action_name] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+
+
+def test_delegation_scope_shorthand_is_normalized_to_canonical(client, app, admin_user, seeded_assessment):
+    """Scope submitted as shorthand 'cohort:42' must be stored as 'scope:cohort:42'."""
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    _reauth_session(client, "create_delegation")
+
+    with app.app_context():
+        admin_id = User.query.filter_by(username="admin").first().id
+        cohort_id = seeded_assessment["cohort_id"]
+        delegate = User(username="norm_test_user", role="faculty_advisor", password_hash="x", is_active=True)
+        db.session.add(delegate)
+        db.session.commit()
+        delegate_id = delegate.id
+
+    res = client.post(
+        "/admin/permissions/delegations",
+        data={
+            "delegator_id": str(admin_id),
+            "delegate_id": str(delegate_id),
+            "scope": f"cohort:{cohort_id}",
+            "permissions": "cohort:view",
+            "expires_in_days": "7",
+        },
+        headers={"HX-Request": "true"},
+    )
+    assert res.status_code == 200
+
+    with app.app_context():
+        d = TemporaryDelegation.query.filter_by(delegate_id=delegate_id).order_by(TemporaryDelegation.id.desc()).first()
+        assert d is not None
+        assert d.scope == f"scope:cohort:{cohort_id}", (
+            f"Expected canonical scope 'scope:cohort:{cohort_id}', got '{d.scope}'"
+        )
+
+
+def test_delegation_invalid_scope_returns_400(client, app, admin_user, seeded_assessment):
+    """Submitting a completely unrecognized scope format must return 400 with an error message."""
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    _reauth_session(client, "create_delegation")
+
+    with app.app_context():
+        admin_id = User.query.filter_by(username="admin").first().id
+        delegate = User(username="bad_scope_user", role="faculty_advisor", password_hash="x", is_active=True)
+        db.session.add(delegate)
+        db.session.commit()
+        delegate_id = delegate.id
+
+    res = client.post(
+        "/admin/permissions/delegations",
+        data={
+            "delegator_id": str(admin_id),
+            "delegate_id": str(delegate_id),
+            "scope": "INVALID:FORMAT:!!",
+            "permissions": "cohort:view",
+            "expires_in_days": "7",
+        },
+        headers={"HX-Request": "true"},
+    )
+    assert res.status_code == 400
+    assert "Invalid scope" in res.get_data(as_text=True)
+
+
+def test_delegation_grants_access_to_delegated_cohort(client, app, admin_user, seeded_assessment):
+    """End-to-end: admin creates delegation for faculty_advisor via route; delegate can
+    access the delegated cohort detail page but NOT a cohort outside the scope."""
+    from tests.conftest import create_user
+    from app.services.auth_service import hash_password
+
+    cohort_id = seeded_assessment["cohort_id"]
+    cohort2_id = seeded_assessment["cohort2_id"]
+
+    with app.app_context():
+        advisor = create_user("effect_advisor", "faculty_advisor", "Advisor@Practicum1")
+        advisor_id = advisor.id
+        admin_id = User.query.filter_by(username="admin").first().id
+
+    # Step 1: admin creates delegation with canonical scope
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    _reauth_session(client, "create_delegation")
+    res = client.post(
+        "/admin/permissions/delegations",
+        data={
+            "delegator_id": str(admin_id),
+            "delegate_id": str(advisor_id),
+            "scope": f"scope:cohort:{cohort_id}",
+            "permissions": "cohort:view",
+            "expires_in_days": "7",
+        },
+        headers={"HX-Request": "true"},
+    )
+    assert res.status_code == 200
+
+    # Step 2: login as the advisor (no cohort membership)
+    client.get("/logout", follow_redirects=True)
+    client.post("/login", data={"username": "effect_advisor", "password": "Advisor@Practicum1"})
+
+    # Step 3: advisor CAN access the delegated cohort
+    res_allowed = client.get(f"/cohorts/{cohort_id}", follow_redirects=False)
+    assert res_allowed.status_code == 200, (
+        f"Advisor with delegated scope:cohort:{cohort_id} must be able to access /cohorts/{cohort_id}"
+    )
+
+    # Step 4: advisor CANNOT access a different cohort outside the delegation scope
+    res_denied = client.get(f"/cohorts/{cohort2_id}", follow_redirects=False)
+    assert res_denied.status_code == 403, (
+        f"Advisor must NOT access cohort {cohort2_id} which is outside the delegated scope"
+    )
+
+
+def test_delegation_access_denied_after_expiry(client, app, admin_user, seeded_assessment):
+    """A delegation with is_active=False must not grant cohort access."""
+    from tests.conftest import create_user
+    import json
+
+    cohort_id = seeded_assessment["cohort_id"]
+
+    with app.app_context():
+        advisor = create_user("expired_advisor", "faculty_advisor", "Advisor@Practicum1")
+        advisor_id = advisor.id
+        admin_id = User.query.filter_by(username="admin").first().id
+
+        # Insert an already-expired (is_active=False) delegation directly
+        past = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
+        d = TemporaryDelegation(
+            delegator_id=admin_id,
+            delegate_id=advisor_id,
+            scope=f"scope:cohort:{cohort_id}",
+            permissions=json.dumps(["cohort:view"]),
+            expires_at=past,
+            is_active=False,
+        )
+        db.session.add(d)
+        db.session.commit()
+
+    client.post("/login", data={"username": "expired_advisor", "password": "Advisor@Practicum1"})
+    res = client.get(f"/cohorts/{cohort_id}", follow_redirects=False)
+    assert res.status_code == 403, "Expired/inactive delegation must not grant cohort access"
+
+
+# ---------------------------------------------------------------------------
+# Anomaly GET read-only + scan POST tests  (audit finding #3)
+# ---------------------------------------------------------------------------
+
+def test_get_anomalies_is_side_effect_free(client, app, admin_user):
+    """GET /admin/anomalies must not create AnomalyFlag records."""
+    from app.models.anomaly_flag import AnomalyFlag
+
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+
+    with app.app_context():
+        before_count = AnomalyFlag.query.count()
+
+    res = client.get("/admin/anomalies")
+    assert res.status_code == 200
+
+    with app.app_context():
+        after_count = AnomalyFlag.query.count()
+
+    assert before_count == after_count, (
+        "GET /admin/anomalies must be side-effect free and must not create AnomalyFlag records"
+    )
+
+
+def test_anomaly_scan_post_creates_flags_and_audit_event(client, app, admin_user):
+    """POST /admin/anomalies/scan must create AnomalyFlag records (if any detected) and
+    emit an ANOMALY_FLAGS_CREATED audit log entry."""
+    from app.models.anomaly_flag import AnomalyFlag
+    from app.models.audit_log import AuditLog
+
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+
+    # Capture the initial count
+    with app.app_context():
+        before_flag_count = AnomalyFlag.query.count()
+
+    res = client.post("/admin/anomalies/scan", headers={"HX-Request": "true"})
+    assert res.status_code == 200
+
+    with app.app_context():
+        after_flag_count = AnomalyFlag.query.count()
+        new_flags = after_flag_count - before_flag_count
+
+    # If new flags were created, a corresponding audit event must exist
+    if new_flags > 0:
+        with app.app_context():
+            audit_row = AuditLog.query.filter_by(action="ANOMALY_FLAGS_CREATED").first()
+            assert audit_row is not None, "ANOMALY_FLAGS_CREATED audit event must be emitted when flags are created"
+
+
+def test_anomaly_scan_post_requires_dept_admin(client, app, admin_user, student_user):
+    """POST /admin/anomalies/scan must be inaccessible to non-admin users."""
+    client.post("/login", data={"username": "student1", "password": "Student@Practicum1"})
+    res = client.post("/admin/anomalies/scan", follow_redirects=False)
+    assert res.status_code in (302, 403)

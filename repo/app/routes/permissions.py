@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, abort, redirect, render_template, request, session, url_for
@@ -10,6 +11,30 @@ from app.services import audit_service
 from app.services.decorators import high_risk_action, login_required, require_role
 
 permissions_bp = Blueprint("permissions", __name__, url_prefix="/admin/permissions")
+
+_CANONICAL_SCOPE_RE = re.compile(r"^scope:(global|dept|school:\d+|major:\d+|class:\d+|cohort:\d+)$")
+
+
+def _normalize_scope(raw: str) -> tuple[str, str | None]:
+    """Normalize raw scope input to canonical ``scope:<type>[:<id>]`` format.
+
+    Accepts both canonical (``scope:cohort:42``) and shorthand (``cohort:42``)
+    forms.  Returns ``(canonical_scope, error_or_None)``.
+    """
+    s = (raw or "").strip()
+    if not s:
+        return s, None  # empty = no restriction (global delegation)
+    if _CANONICAL_SCOPE_RE.match(s):
+        return s, None
+    # Try normalizing shorthand: cohort:42 -> scope:cohort:42
+    normalized = f"scope:{s}"
+    if _CANONICAL_SCOPE_RE.match(normalized):
+        return normalized, None
+    return s, (
+        f"Invalid scope format '{s}'. "
+        "Use canonical format: scope:cohort:<id>, scope:school:<id>, "
+        "scope:global — or shorthand: cohort:<id>, school:<id>, global."
+    )
 
 
 @permissions_bp.get("/templates")
@@ -107,7 +132,9 @@ def delegations_page():
 def create_delegation():
     delegator_id = int(request.form.get("delegator_id"))
     delegate_id = int(request.form.get("delegate_id"))
-    scope = (request.form.get("scope") or "").strip()
+    scope, scope_error = _normalize_scope(request.form.get("scope") or "")
+    if scope_error:
+        return f"<div class='alert alert-danger' role='alert'>{scope_error}</div>", 400
     permissions_raw = (request.form.get("permissions") or "").strip()
     permissions = [p.strip() for p in permissions_raw.split(",") if p.strip()]
 

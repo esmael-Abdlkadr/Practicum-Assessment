@@ -60,26 +60,51 @@ def audit_logs_export():
 @login_required
 @require_role("dept_admin")
 def anomalies_page():
+    """Read-only view — returns existing anomaly flags without any side effects."""
+    rows = AnomalyFlag.query.order_by(AnomalyFlag.detected_at.desc()).all()
+    return render_template("admin/anomalies.html", anomalies=rows)
+
+
+@admin_bp.post("/anomalies/scan")
+@login_required
+@require_role("dept_admin")
+def anomalies_scan():
+    """Explicit trigger: detect anomalies, persist new flags, and emit audit events."""
+    from app.services.session_service import get_current_user as _get_actor
+
+    actor = _get_actor()
+    actor_id = actor.id if actor else None
     users = User.query.all()
+    created = 0
 
     for user in users:
         anomaly_messages = audit_service.detect_anomalies(user.id)
         for message in anomaly_messages:
             exists = AnomalyFlag.query.filter_by(user_id=user.id, anomaly_type=message, reviewed=False).first()
             if not exists:
-                db.session.add(
-                    AnomalyFlag(
-                        user_id=user.id,
-                        username=user.username,
-                        anomaly_type=message,
-                        detected_at=datetime.now(timezone.utc).replace(tzinfo=None),
-                        reviewed=False,
-                    )
+                flag = AnomalyFlag(
+                    user_id=user.id,
+                    username=user.username,
+                    anomaly_type=message,
+                    detected_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    reviewed=False,
                 )
+                db.session.add(flag)
+                created += 1
+
     db.session.commit()
 
+    # Emit one audit event per new flag (flush individually for traceability)
+    if created:
+        audit_service.log(
+            action="ANOMALY_FLAGS_CREATED",
+            resource_type="anomaly_flag",
+            resource_id=None,
+            extra={"count": created, "actor_id": actor_id},
+        )
+
     rows = AnomalyFlag.query.order_by(AnomalyFlag.detected_at.desc()).all()
-    return render_template("admin/anomalies.html", anomalies=rows)
+    return render_template("admin/_anomalies_table.html", anomalies=rows, scan_message=f"{created} new flag(s) created.")
 
 
 @admin_bp.post("/anomalies/<int:flag_id>/review")

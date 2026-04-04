@@ -1,6 +1,6 @@
+import pyotp
 from flask import Blueprint, render_template, request, session
 
-from app.extensions import db
 from app.services.decorators import high_risk_action, login_required
 from app.services.mfa_service import (
     disable_mfa,
@@ -31,13 +31,13 @@ def mfa_setup():
     if not user:
         return "", 401
     temp_secret = generate_totp_secret()
-    user.mfa_secret = temp_secret
-    user.mfa_enabled = False
-    db.session.add(user)
-    db.session.commit()
+    # Store only in session — never mutate persisted mfa_enabled or mfa_secret before verification
     session["mfa_setup_secret"] = temp_secret
 
-    otp_uri = get_totp_uri(user)
+    # Compute provisioning URI with the temp secret directly, no DB writes
+    otp_uri = pyotp.totp.TOTP(temp_secret).provisioning_uri(
+        name=user.username, issuer_name="Practicum System"
+    )
     qr_svg = generate_qr_svg(otp_uri)
 
     return render_template("settings/_mfa_setup.html", qr_svg=qr_svg, error_message="", success_message="")

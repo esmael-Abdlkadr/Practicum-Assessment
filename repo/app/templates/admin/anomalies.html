@@ -9,53 +9,23 @@
     <h1 class="page-title mb-0">Anomalous Login Patterns</h1>
     <p class="page-subtitle mb-0">Review and acknowledge suspicious access behavior.</p>
   </div>
+  <div class="mt-3">
+    <button
+      class="btn btn-warning"
+      hx-post="/admin/anomalies/scan"
+      hx-target="#anomaly-results"
+      hx-swap="innerHTML"
+      hx-indicator="#scan-spinner"
+    >
+      Scan for Anomalies
+    </button>
+    <span id="scan-spinner" class="htmx-indicator ms-2 spinner-border spinner-border-sm" role="status"></span>
+  </div>
 </div>
 
 <section class="card">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle data-table">
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>Anomaly Type</th>
-            <th>Detected At</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in anomalies %}
-            <tr>
-              <td>{{ row.username }}</td>
-              <td>{{ row.anomaly_type }}</td>
-              <td>{{ row.detected_at }}</td>
-              <td id="anomaly-status-{{ row.id }}">
-                {% if row.reviewed %}
-                  <span class="badge text-bg-success">reviewed</span>
-                {% else %}
-                  <span class="badge text-bg-warning">unreviewed</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if not row.reviewed %}
-                  <button
-                    class="btn btn-sm btn-outline-primary"
-                    hx-post="/admin/anomalies/{{ row.id }}/review"
-                    hx-target="#anomaly-status-{{ row.id }}"
-                    hx-swap="innerHTML"
-                  >Mark Reviewed</button>
-                {% endif %}
-              </td>
-            </tr>
-          {% else %}
-            <tr>
-              <td colspan="5" class="text-muted">No anomaly flags detected.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+  <div class="card-body p-0" id="anomaly-results">
+    {% include "admin/_anomalies_table.html" %}
   </div>
 </section>
 {% endblock %}
