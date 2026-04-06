@@ -142,6 +142,36 @@ def detect_anomalies(user_id: int) -> list[str]:
     return anomalies
 
 
+def evaluate_user_anomalies(user_id: int, username: str) -> int:
+    """Run anomaly detection for a single user and persist new flags.
+
+    Called automatically on login events.  Only checks the one user (no
+    full-table scan) and de-duplicates against existing unreviewed flags.
+    Returns the number of new flags created.
+    """
+    from app.models.anomaly_flag import AnomalyFlag
+
+    anomaly_messages = detect_anomalies(user_id)
+    created = 0
+    for message in anomaly_messages:
+        exists = AnomalyFlag.query.filter_by(
+            user_id=user_id, anomaly_type=message, reviewed=False
+        ).first()
+        if not exists:
+            flag = AnomalyFlag(
+                user_id=user_id,
+                username=username,
+                anomaly_type=message,
+                detected_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                reviewed=False,
+            )
+            db.session.add(flag)
+            created += 1
+    if created:
+        db.session.commit()
+    return created
+
+
 def export_logs_csv(pagination) -> str:
     buffer = StringIO()
     writer = csv.writer(buffer)
@@ -175,13 +205,81 @@ def export_logs_csv(pagination) -> str:
     return buffer.getvalue()
 
 
+def _archive_logs(logs: list[AuditLog], archive_dir: str | None = None) -> str | None:
+    """Write *logs* to a timestamped CSV archive file.
+
+    Returns the archive file path, or ``None`` if no logs to archive.
+    """
+    if not logs:
+        return None
+
+    if archive_dir is None:
+        archive_dir = os.environ.get("AUDIT_ARCHIVE_DIR", "data/audit_archive")
+
+    from pathlib import Path
+
+    path = Path(archive_dir)
+    path.mkdir(parents=True, exist_ok=True)
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    filepath = path / f"audit_archive_{stamp}.csv"
+
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow([
+        "id", "timestamp", "actor_id", "actor_username", "action",
+        "resource_type", "resource_id", "old_value", "new_value",
+        "ip_address", "device_fingerprint", "extra",
+    ])
+    for row in logs:
+        writer.writerow([
+            row.id,
+            row.created_at.isoformat() if row.created_at else "",
+            row.actor_id or "",
+            row.actor_username or "",
+            row.action,
+            row.resource_type or "",
+            row.resource_id or "",
+            row.old_value or "",
+            row.new_value or "",
+            row.ip_address or "",
+            row.device_fingerprint or "",
+            row.extra or "",
+        ])
+
+    filepath.write_text(buffer.getvalue(), encoding="utf-8")
+    return str(filepath)
+
+
 def purge_old_logs() -> int:
-    """Delete audit logs older than AUDIT_RETENTION_DAYS. Returns count deleted."""
+    """Archive then delete audit logs older than AUDIT_RETENTION_DAYS.
+
+    Append-only semantics are enforced within the retention window by the
+    ORM-level event listeners on AuditLog (before_update / before_delete).
+    Beyond the retention window, logs are first archived to CSV, then bulk-
+    deleted via a raw query that bypasses the ORM listeners.
+
+    Returns count of purged rows.
+    """
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=AUDIT_RETENTION_DAYS)
-    query = AuditLog.query.filter(AuditLog.created_at < cutoff)
-    count = query.count()
-    if count == 0:
+    expired = AuditLog.query.filter(AuditLog.created_at < cutoff).all()
+    if not expired:
         return 0
-    query.delete(synchronize_session=False)
+
+    # Archive before delete.
+    _archive_logs(expired)
+
+    count = len(expired)
+    expired_ids = [row.id for row in expired]
+
+    # Expunge rows from session so ORM before_delete listener is not triggered,
+    # then bulk delete via raw SQL.
+    for row in expired:
+        db.session.expunge(row)
+
+    from sqlalchemy import text
+
+    placeholders = ", ".join(str(int(i)) for i in expired_ids)
+    db.session.execute(text(f"DELETE FROM audit_logs WHERE id IN ({placeholders})"))
     db.session.commit()
     return count

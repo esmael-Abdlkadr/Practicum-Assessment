@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from app.extensions import db
 from app.models.assignment import CohortMember
-from app.models.org import Class, Cohort, Major, School, SubDepartment
+from app.models.org import Class, Cohort, Department, Major, School, SubDepartment
 from app.models.permission import TemporaryDelegation, UserPermission
 
 ROLE_PERMISSIONS = {
@@ -19,6 +19,11 @@ ROLE_PERMISSIONS = {
     "corporate_mentor": {"dashboard:view", "cohort:view", "cohort:grade"},
     "student": {"dashboard:view", "assessment:view:self"},
 }
+
+# ---------------------------------------------------------------------------
+#  Scope hierarchy levels (ordered broadest → narrowest)
+# ---------------------------------------------------------------------------
+SCOPE_LEVELS = ("global", "dept", "subdept", "school", "major", "class", "cohort", "self")
 
 
 def _get_user_school_ids(user) -> set[int]:
@@ -56,6 +61,132 @@ def _get_user_department_ids(user) -> set[int]:
         .all()
     )
     return {row[0] for row in rows if row[0]}
+
+
+def _get_subdept_cohort_ids(subdept_id: int) -> set[int]:
+    """Return all cohort IDs under a specific sub-department."""
+    rows = (
+        db.session.query(Cohort.id)
+        .join(Class, Class.id == Cohort.class_id)
+        .join(Major, Major.id == Class.major_id)
+        .filter(Major.sub_department_id == subdept_id, Cohort.is_active.is_(True))
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def _get_dept_and_subdept_cohort_ids(dept_id: int) -> set[int]:
+    """Return all cohort IDs under a department (including all its sub-departments)."""
+    rows = (
+        db.session.query(Cohort.id)
+        .join(Class, Class.id == Cohort.class_id)
+        .join(Major, Major.id == Class.major_id)
+        .join(SubDepartment, SubDepartment.id == Major.sub_department_id)
+        .filter(SubDepartment.department_id == dept_id, Cohort.is_active.is_(True))
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def resolve_scope(user, scopes: set[str] | None = None) -> set[int]:
+    """Resolve a set of scope strings into concrete cohort IDs.
+
+    Scope strings supported:
+        scope:global          – all active cohorts
+        scope:self            – cohorts where user is a member
+        scope:dept            – cohorts in user's own department(s) + sub-departments
+        scope:subdept:<id>    – cohorts under a specific sub-department
+        scope:school:<id>     – cohorts under a school
+        scope:major:<id>      – cohorts under a major
+        scope:class:<id>      – cohorts under a class
+        scope:cohort:<id>     – a single cohort
+
+    If *scopes* is ``None`` the user's ``UserPermission`` rows are read.
+    """
+    if scopes is None:
+        scopes = {
+            up.permission
+            for up in UserPermission.query.filter_by(user_id=user.id).all()
+            if up.permission.startswith("scope:")
+        }
+
+    cohort_ids: set[int] = set()
+
+    if "scope:global" in scopes:
+        return {c.id for c in Cohort.query.filter(Cohort.is_active.is_(True)).all()}
+
+    if "scope:self" in scopes:
+        cohort_ids.update(
+            cm.cohort_id for cm in CohortMember.query.filter_by(user_id=user.id).all()
+        )
+
+    if "scope:dept" in scopes:
+        user_dept_ids = _get_user_department_ids(user)
+        for dept_id in user_dept_ids:
+            cohort_ids.update(_get_dept_and_subdept_cohort_ids(dept_id))
+        if not user_dept_ids:
+            # Legacy fallback: use school-level match
+            dept_school_ids = _get_user_school_ids(user)
+            if dept_school_ids:
+                ids = (
+                    db.session.query(Cohort.id)
+                    .join(Class, Class.id == Cohort.class_id)
+                    .join(Major, Major.id == Class.major_id)
+                    .filter(Major.school_id.in_(dept_school_ids), Cohort.is_active.is_(True))
+                    .all()
+                )
+                cohort_ids.update(row[0] for row in ids)
+
+    for s in scopes:
+        if s.startswith("scope:subdept:"):
+            try:
+                subdept_id = int(s.split(":")[-1])
+                cohort_ids.update(_get_subdept_cohort_ids(subdept_id))
+            except (ValueError, IndexError):
+                pass
+        elif s.startswith("scope:school:"):
+            try:
+                school_id = int(s.split(":")[-1])
+                ids = (
+                    db.session.query(Cohort.id)
+                    .join(Class, Class.id == Cohort.class_id)
+                    .join(Major, Major.id == Class.major_id)
+                    .filter(Major.school_id == school_id, Cohort.is_active.is_(True))
+                    .all()
+                )
+                cohort_ids.update(row[0] for row in ids)
+            except (ValueError, IndexError):
+                pass
+        elif s.startswith("scope:major:"):
+            try:
+                major_id = int(s.split(":")[-1])
+                ids = (
+                    db.session.query(Cohort.id)
+                    .join(Class, Class.id == Cohort.class_id)
+                    .filter(Class.major_id == major_id, Cohort.is_active.is_(True))
+                    .all()
+                )
+                cohort_ids.update(row[0] for row in ids)
+            except (ValueError, IndexError):
+                pass
+        elif s.startswith("scope:class:"):
+            try:
+                class_id = int(s.split(":")[-1])
+                ids = (
+                    db.session.query(Cohort.id)
+                    .filter(Cohort.class_id == class_id, Cohort.is_active.is_(True))
+                    .all()
+                )
+                cohort_ids.update(row[0] for row in ids)
+            except (ValueError, IndexError):
+                pass
+        elif s.startswith("scope:cohort:"):
+            try:
+                cohort_ids.add(int(s.split(":")[-1]))
+            except (ValueError, IndexError):
+                pass
+
+    return cohort_ids
 
 
 def _json_list(raw: str | None) -> list[str]:
@@ -109,10 +240,17 @@ def has_permission(user, permission: str, effective_role: str | None = None) -> 
 
 
 def get_delegation_cohort_ids(user) -> set[int] | None:
-    """
-    Returns the set of cohort IDs accessible via active delegations,
-    or None if any active delegation has global scope (no restriction).
-    Returns an empty set if the user has no active delegations.
+    """Return the set of cohort IDs accessible via active delegations.
+
+    All delegation scopes are resolved through the canonical
+    :func:`resolve_scope` resolver so that ``scope:dept``,
+    ``scope:subdept:<id>``, ``scope:school:<id>``, ``scope:major:<id>``,
+    ``scope:class:<id>``, ``scope:self``, ``scope:cohort:<id>``, and
+    ``scope:global`` are all evaluated identically to ``UserPermission``
+    scopes.
+
+    Returns ``None`` if any active delegation has global scope (unrestricted).
+    Returns an empty ``set()`` if the user has no active delegations.
     """
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     delegations = TemporaryDelegation.query.filter(
@@ -124,17 +262,19 @@ def get_delegation_cohort_ids(user) -> set[int] | None:
     if not delegations:
         return set()
 
-    cohort_ids: set[int] = set()
+    # Collect all delegation scope strings, then resolve through the
+    # canonical hierarchy resolver.
+    scopes: set[str] = set()
     for d in delegations:
         scope = (d.scope or "").strip()
-        if not scope or scope == "scope:global":
-            return None
-        if scope.startswith("scope:cohort:"):
-            try:
-                cohort_ids.add(int(scope.split(":")[-1]))
-            except (ValueError, IndexError):
-                pass
-    return cohort_ids
+        if not scope or scope in {"global", "scope:global"}:
+            return None  # unrestricted
+        # Backward compatibility: normalize legacy shorthand (e.g. "cohort:1").
+        if not scope.startswith("scope:"):
+            scope = f"scope:{scope}"
+        scopes.add(scope)
+
+    return resolve_scope(user, scopes)
 
 
 def get_accessible_cohorts(user, effective_role: str | None = None) -> list[Cohort]:
@@ -187,6 +327,14 @@ def get_accessible_cohorts(user, effective_role: str | None = None) -> list[Coho
                 .all()
             )
             scope_cohort_ids.update(row[0] for row in ids)
+
+    for s in scopes:
+        if s.startswith("scope:subdept:"):
+            try:
+                subdept_id = int(s.split(":")[-1])
+                scope_cohort_ids.update(_get_subdept_cohort_ids(subdept_id))
+            except (ValueError, IndexError):
+                pass
 
     for s in scopes:
         if s.startswith("scope:major:"):
@@ -294,12 +442,18 @@ def _scope_permits_cohort(user, cohort_id: int) -> bool:
             return True
     if school and f"scope:school:{school.id}" in scopes_granted:
         return True
+    if major and major.sub_department_id and f"scope:subdept:{major.sub_department_id}" in scopes_granted:
+        return True
     if major and f"scope:major:{major.id}" in scopes_granted:
         return True
     if klass and f"scope:class:{klass.id}" in scopes_granted:
         return True
     if f"scope:cohort:{cohort_id}" in scopes_granted:
         return True
+    # scope:self — user is a member of this cohort
+    if "scope:self" in scopes_granted:
+        if CohortMember.query.filter_by(user_id=user.id, cohort_id=cohort_id).first():
+            return True
     return False
 
 

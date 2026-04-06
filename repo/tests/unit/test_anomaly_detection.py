@@ -154,3 +154,83 @@ def test_detect_anomalies_no_logs_returns_empty(app):
     with app.app_context():
         anomalies = audit_service.detect_anomalies(uid)
     assert anomalies == []
+
+
+# ---------------------------------------------------------------------------
+#  evaluate_user_anomalies (automatic on-login trigger) tests
+# ---------------------------------------------------------------------------
+
+
+def test_evaluate_user_anomalies_creates_flags(app):
+    """evaluate_user_anomalies persists AnomalyFlag rows without manual scan."""
+    from app.models.anomaly_flag import AnomalyFlag
+
+    uid = _make_user(app, "auto_flag_user")
+    now = _utcnow()
+    # Trigger brute-force condition: >5 failures in 1h
+    for _ in range(6):
+        _add_log(app, uid, "LOGIN_FAILED", created_at=now - timedelta(minutes=5))
+
+    with app.app_context():
+        created = audit_service.evaluate_user_anomalies(uid, "auto_flag_user")
+        assert created >= 1
+        flags = AnomalyFlag.query.filter_by(user_id=uid, reviewed=False).all()
+        assert any("failed login" in f.anomaly_type.lower() for f in flags)
+
+
+def test_evaluate_user_anomalies_deduplicates(app):
+    """Calling evaluate twice does not create duplicate flags."""
+    from app.models.anomaly_flag import AnomalyFlag
+
+    uid = _make_user(app, "dedup_user")
+    now = _utcnow()
+    for _ in range(6):
+        _add_log(app, uid, "LOGIN_FAILED", created_at=now - timedelta(minutes=5))
+
+    with app.app_context():
+        first = audit_service.evaluate_user_anomalies(uid, "dedup_user")
+        second = audit_service.evaluate_user_anomalies(uid, "dedup_user")
+        assert first >= 1
+        assert second == 0
+
+
+def test_evaluate_user_anomalies_no_anomaly_no_flags(app):
+    """If there are no anomalies, no flags are created."""
+    from app.models.anomaly_flag import AnomalyFlag
+
+    uid = _make_user(app, "clean_auto_user")
+    with app.app_context():
+        created = audit_service.evaluate_user_anomalies(uid, "clean_auto_user")
+        assert created == 0
+        assert AnomalyFlag.query.filter_by(user_id=uid).count() == 0
+
+
+def test_login_triggers_anomaly_evaluation(app, client):
+    """A real login attempt triggers automatic anomaly evaluation."""
+    from app.models.anomaly_flag import AnomalyFlag
+
+    with app.app_context():
+        from app.services.auth_service import hash_password
+        from app.models.user import User
+
+        user = User(
+            username="login_anomaly_user",
+            role="student",
+            password_hash=hash_password("Student@Practicum1"),
+            is_active=True,
+        )
+        db.session.add(user)
+        db.session.commit()
+        uid = user.id
+
+        # Pre-populate brute force audit logs
+        now = _utcnow()
+        for _ in range(6):
+            _add_log(app, uid, "LOGIN_FAILED", created_at=now - timedelta(minutes=5))
+
+    # Login triggers evaluate_user_anomalies automatically
+    client.post("/login", data={"username": "login_anomaly_user", "password": "Student@Practicum1"})
+
+    with app.app_context():
+        flags = AnomalyFlag.query.filter_by(user_id=uid, reviewed=False).all()
+        assert len(flags) >= 1

@@ -168,6 +168,8 @@ def login_mfa_submit():
     session.pop("pending_username", None)
     record_login_attempt(username=user.username, ip=_client_ip(), success=True)
     audit_service.log(action="LOGIN_SUCCESS", resource_type="user", resource_id=user.id)
+    # Incremental anomaly evaluation for this user only.
+    audit_service.evaluate_user_anomalies(user.id, user.username)
 
     if request.headers.get("HX-Request") == "true":
         response = make_response("", 204)

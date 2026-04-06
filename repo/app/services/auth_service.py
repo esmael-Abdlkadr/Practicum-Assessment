@@ -120,6 +120,8 @@ def authenticate(username: str, password: str, ip: str | None) -> tuple[User | N
             resource_id=user.id,
             extra={"username": username, "reason": "wrong_password"},
         )
+        # Evaluate anomalies on failed login to catch brute-force patterns.
+        audit_service.evaluate_user_anomalies(user.id, user.username)
         return None, "Invalid username or password."
 
     reset_failed_attempts(user)
@@ -133,6 +135,8 @@ def authenticate(username: str, password: str, ip: str | None) -> tuple[User | N
     db.session.commit()
     record_login_attempt(username, ip, True)
     audit_service.log(action="LOGIN_SUCCESS", resource_type="user", resource_id=user.id)
+    # Incremental anomaly evaluation for this user only (no full-table scan).
+    audit_service.evaluate_user_anomalies(user.id, user.username)
     return user, ""
 
 

@@ -12,7 +12,9 @@ from app.services.decorators import high_risk_action, login_required, require_ro
 
 permissions_bp = Blueprint("permissions", __name__, url_prefix="/admin/permissions")
 
-_CANONICAL_SCOPE_RE = re.compile(r"^scope:(global|dept|school:\d+|major:\d+|class:\d+|cohort:\d+)$")
+_CANONICAL_SCOPE_RE = re.compile(
+    r"^scope:(global|self|dept|subdept:\d+|school:\d+|major:\d+|class:\d+|cohort:\d+)$"
+)
 
 
 def _normalize_scope(raw: str) -> tuple[str, str | None]:
@@ -32,8 +34,9 @@ def _normalize_scope(raw: str) -> tuple[str, str | None]:
         return normalized, None
     return s, (
         f"Invalid scope format '{s}'. "
-        "Use canonical format: scope:cohort:<id>, scope:school:<id>, "
-        "scope:global — or shorthand: cohort:<id>, school:<id>, global."
+        "Use canonical format: scope:global, scope:self, scope:dept, "
+        "scope:subdept:<id>, scope:school:<id>, scope:major:<id>, "
+        "scope:class:<id>, scope:cohort:<id> — or shorthand without 'scope:' prefix."
     )
 
 

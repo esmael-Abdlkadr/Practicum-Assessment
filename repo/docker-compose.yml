@@ -6,7 +6,7 @@ services:
     environment:
       FLASK_APP: ${FLASK_APP:-app}
       FLASK_ENV: ${FLASK_ENV:-development}
-      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-min-32-chars}
+      SECRET_KEY: ${SECRET_KEY:-}
       DATABASE_URL: ${DATABASE_URL:-sqlite:///data/practicum.db}
       SESSION_TYPE: ${SESSION_TYPE:-filesystem}
       SESSION_LIFETIME_MINUTES: ${SESSION_LIFETIME_MINUTES:-30}

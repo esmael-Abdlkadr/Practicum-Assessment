@@ -17,11 +17,18 @@ Practicum Assessment & Access Governance System is an offline-first internship a
 
 ## Quick Start
 
-1. Build and start the app:
+1. Generate a secure secret key and start the app:
 
 ```bash
+# Generate a strong SECRET_KEY (required for production, recommended for dev)
+export SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+
 docker compose up --build
 ```
+
+> **Note:** If `SECRET_KEY` is not set, the app will auto-generate a per-install
+> random key and persist it to `data/.secret_key`. Known-weak/default keys are
+> rejected in non-test mode.
 
 2. Open the web app:
    - `http://localhost:5000`
@@ -79,9 +86,12 @@ python3 -m venv .venv
 source .venv/bin/activate          # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 export FLASK_APP=app
-export SECRET_KEY=dev-secret-key-change-me
+export SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 flask run
 ```
+
+> If `SECRET_KEY` is not set or is a known-weak value, the app auto-generates
+> a random per-install key and persists it to `data/.secret_key`.
 
 Run tests locally:
 

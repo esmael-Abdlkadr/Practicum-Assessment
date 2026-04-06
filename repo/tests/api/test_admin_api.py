@@ -768,3 +768,263 @@ def test_anomaly_scan_post_requires_dept_admin(client, app, admin_user, student_
     client.post("/login", data={"username": "student1", "password": "Student@Practicum1"})
     res = client.post("/admin/anomalies/scan", follow_redirects=False)
     assert res.status_code in (302, 403)
+
+
+# ---------------------------------------------------------------------------
+# Delegation hierarchy scope API tests (F-002)
+# ---------------------------------------------------------------------------
+
+
+def _create_delegation_via_api(client, app, admin_id, delegate_id, scope):
+    """Helper: admin creates a delegation via the API route."""
+    _reauth_session(client, "create_delegation")
+    return client.post(
+        "/admin/permissions/delegations",
+        data={
+            "delegator_id": str(admin_id),
+            "delegate_id": str(delegate_id),
+            "scope": scope,
+            "permissions": "cohort:view,cohort:grade",
+            "expires_in_days": "7",
+        },
+        headers={"HX-Request": "true"},
+    )
+
+
+def test_api_delegation_scope_school_grants_access(client, app, admin_user, seeded_assessment):
+    """Delegation created with scope:school:<id> must grant cohort access to delegate."""
+    from tests.conftest import create_user
+    from app.models.org import Cohort, Class, Major
+
+    with app.app_context():
+        admin_id = User.query.filter_by(username="admin").first().id
+        cohort = db.session.get(Cohort, seeded_assessment["cohort_id"])
+        klass = db.session.get(Class, cohort.class_id)
+        major = db.session.get(Major, klass.major_id)
+        school_id = major.school_id
+        advisor = create_user("api_school_advisor", "faculty_advisor", "Advisor@Practicum1")
+        advisor_id = advisor.id
+
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    res = _create_delegation_via_api(client, app, admin_id, advisor_id, f"scope:school:{school_id}")
+    assert res.status_code == 200
+
+    client.get("/logout", follow_redirects=True)
+    client.post("/login", data={"username": "api_school_advisor", "password": "Advisor@Practicum1"})
+
+    res_ok = client.get(f"/cohorts/{seeded_assessment['cohort_id']}", follow_redirects=False)
+    assert res_ok.status_code == 200, "Delegate with scope:school must access cohorts in that school"
+
+
+def test_api_delegation_scope_school_denies_other_school(client, app, admin_user, seeded_assessment):
+    """Delegation with scope:school:<id> must deny cohorts in a different school."""
+    from tests.conftest import create_user
+    from app.models.org import Cohort, Class, Major, School, Department, SubDepartment
+
+    with app.app_context():
+        admin_id = User.query.filter_by(username="admin").first().id
+        cohort = db.session.get(Cohort, seeded_assessment["cohort_id"])
+        klass = db.session.get(Class, cohort.class_id)
+        major = db.session.get(Major, klass.major_id)
+        school_id = major.school_id
+
+        # Create cohort in a different school
+        school2 = School(name="School API2", code="SA2", is_active=True)
+        db.session.add(school2)
+        db.session.flush()
+        dept2 = Department(school_id=school2.id, name="Dept API2", code="DA2")
+        db.session.add(dept2)
+        db.session.flush()
+        sub2 = SubDepartment(department_id=dept2.id, name="Sub API2", code="SBA2")
+        db.session.add(sub2)
+        db.session.flush()
+        major2 = Major(name="Major API2", code="MA2", school_id=school2.id, sub_department_id=sub2.id)
+        db.session.add(major2)
+        db.session.flush()
+        class2 = Class(name="Class API2", year=2026, major_id=major2.id)
+        db.session.add(class2)
+        db.session.flush()
+        other_cohort = Cohort(name="Cohort API2", class_id=class2.id, internship_term="2026 Spring", is_active=True)
+        db.session.add(other_cohort)
+        db.session.commit()
+        other_cohort_id = other_cohort.id
+
+        advisor = create_user("api_school_deny_adv", "faculty_advisor", "Advisor@Practicum1")
+        advisor_id = advisor.id
+
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    _create_delegation_via_api(client, app, admin_id, advisor_id, f"scope:school:{school_id}")
+
+    client.get("/logout", follow_redirects=True)
+    client.post("/login", data={"username": "api_school_deny_adv", "password": "Advisor@Practicum1"})
+
+    res_denied = client.get(f"/cohorts/{other_cohort_id}", follow_redirects=False)
+    assert res_denied.status_code == 403, "Delegate must NOT access cohorts outside delegated school"
+
+
+def test_api_delegation_scope_subdept_accepted_and_enforced(client, app, admin_user, seeded_assessment):
+    """scope:subdept:<id> must be accepted by the delegation creation endpoint and enforced."""
+    from tests.conftest import create_user
+    from app.models.org import Cohort, Class, Major, SubDepartment
+
+    with app.app_context():
+        admin_id = User.query.filter_by(username="admin").first().id
+        cohort = db.session.get(Cohort, seeded_assessment["cohort_id"])
+        klass = db.session.get(Class, cohort.class_id)
+        major = db.session.get(Major, klass.major_id)
+        subdept_id = major.sub_department_id
+        advisor = create_user("api_subdept_adv", "faculty_advisor", "Advisor@Practicum1")
+        advisor_id = advisor.id
+
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    res = _create_delegation_via_api(client, app, admin_id, advisor_id, f"scope:subdept:{subdept_id}")
+    assert res.status_code == 200, "scope:subdept:<id> must be accepted by delegation endpoint"
+
+    client.get("/logout", follow_redirects=True)
+    client.post("/login", data={"username": "api_subdept_adv", "password": "Advisor@Practicum1"})
+
+    res_ok = client.get(f"/cohorts/{seeded_assessment['cohort_id']}", follow_redirects=False)
+    assert res_ok.status_code == 200, "Delegate with scope:subdept must access cohorts in that sub-dept"
+
+
+def test_api_delegation_scope_self_accepted_and_enforced(client, app, admin_user, seeded_assessment):
+    """scope:self must be accepted by delegation endpoint; delegate accesses only member cohorts."""
+    from tests.conftest import create_user
+    from app.models.assignment import CohortMember
+
+    with app.app_context():
+        admin_id = User.query.filter_by(username="admin").first().id
+        advisor = create_user("api_self_adv", "faculty_advisor", "Advisor@Practicum1")
+        advisor_id = advisor.id
+        # Make advisor a member of cohort 1 only
+        db.session.add(CohortMember(cohort_id=seeded_assessment["cohort_id"], user_id=advisor_id, role_in_cohort="faculty_advisor"))
+        db.session.commit()
+
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    res = _create_delegation_via_api(client, app, admin_id, advisor_id, "scope:self")
+    assert res.status_code == 200, "scope:self must be accepted by delegation endpoint"
+
+    client.get("/logout", follow_redirects=True)
+    client.post("/login", data={"username": "api_self_adv", "password": "Advisor@Practicum1"})
+
+    res_ok = client.get(f"/cohorts/{seeded_assessment['cohort_id']}", follow_redirects=False)
+    assert res_ok.status_code == 200, "Delegate with scope:self must access member cohort"
+
+    res_denied = client.get(f"/cohorts/{seeded_assessment['cohort2_id']}", follow_redirects=False)
+    assert res_denied.status_code == 403, "Delegate with scope:self must NOT access non-member cohort"
+
+
+def test_api_delegation_scope_dept_shorthand_accepted(client, app, admin_user, seeded_assessment):
+    """Shorthand 'dept' must be normalized to 'scope:dept' and accepted."""
+    from tests.conftest import create_user
+
+    with app.app_context():
+        admin_id = User.query.filter_by(username="admin").first().id
+        advisor = create_user("api_dept_short_adv", "faculty_advisor", "Advisor@Practicum1")
+        advisor_id = advisor.id
+
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    res = _create_delegation_via_api(client, app, admin_id, advisor_id, "dept")
+    assert res.status_code == 200, "Shorthand 'dept' must be normalized and accepted"
+
+    with app.app_context():
+        d = TemporaryDelegation.query.filter_by(delegate_id=advisor_id).order_by(TemporaryDelegation.id.desc()).first()
+        assert d.scope == "scope:dept", f"Expected 'scope:dept', got '{d.scope}'"
+
+
+def test_api_delegation_scope_dept_enforced_across_departments(client, app, admin_user, seeded_assessment):
+    """Delegation with scope:dept must allow same department and deny different department cohorts."""
+    from tests.conftest import create_user
+    from app.models.assignment import CohortMember
+    from app.models.org import Cohort, Class, Major, School, Department, SubDepartment
+
+    with app.app_context():
+        admin_id = User.query.filter_by(username="admin").first().id
+
+        # Seeded cohorts share the same department tree in the fixture.
+        allowed_cohort_id = seeded_assessment["cohort_id"]
+        member_cohort_id = seeded_assessment["cohort2_id"]
+
+        # Create a cohort under a different department tree.
+        school2 = School(name="Dept Scope School 2", code="DSS2", is_active=True)
+        db.session.add(school2)
+        db.session.flush()
+        dept2 = Department(school_id=school2.id, name="Dept Scope Dept 2", code="DSD2")
+        db.session.add(dept2)
+        db.session.flush()
+        sub2 = SubDepartment(department_id=dept2.id, name="Dept Scope Sub 2", code="DSSUB2")
+        db.session.add(sub2)
+        db.session.flush()
+        major2 = Major(name="Dept Scope Major 2", code="DSM2", school_id=school2.id, sub_department_id=sub2.id)
+        db.session.add(major2)
+        db.session.flush()
+        class2 = Class(name="Dept Scope Class 2", year=2026, major_id=major2.id)
+        db.session.add(class2)
+        db.session.flush()
+        denied_cohort = Cohort(name="Dept Scope Cohort 2", class_id=class2.id, internship_term="2026 Spring", is_active=True)
+        db.session.add(denied_cohort)
+        db.session.commit()
+        denied_cohort_id = denied_cohort.id
+
+        advisor = create_user("api_dept_enforce_adv", "faculty_advisor", "Advisor@Practicum1")
+        advisor_id = advisor.id
+        # Give advisor one cohort membership in the target department so scope:dept
+        # can expand to sibling cohorts in that same department tree.
+        db.session.add(
+            CohortMember(
+                cohort_id=member_cohort_id,
+                user_id=advisor_id,
+                role_in_cohort="faculty_advisor",
+            )
+        )
+        db.session.commit()
+
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    res = _create_delegation_via_api(client, app, admin_id, advisor_id, "scope:dept")
+    assert res.status_code == 200
+
+    client.get("/logout", follow_redirects=True)
+    client.post("/login", data={"username": "api_dept_enforce_adv", "password": "Advisor@Practicum1"})
+
+    res_ok = client.get(f"/cohorts/{allowed_cohort_id}", follow_redirects=False)
+    assert res_ok.status_code == 200, "Delegate with scope:dept must access cohorts in delegate's department tree"
+
+    res_denied = client.get(f"/cohorts/{denied_cohort_id}", follow_redirects=False)
+    assert res_denied.status_code == 403, "Delegate with scope:dept must NOT access cohorts in a different department tree"
+
+
+def test_api_delegation_scope_class_enforced(client, app, admin_user, seeded_assessment):
+    """Delegation with scope:class:<id> must grant access to cohorts under that class only."""
+    from tests.conftest import create_user
+    from app.models.org import Cohort, Class, Major
+
+    with app.app_context():
+        admin_id = User.query.filter_by(username="admin").first().id
+        cohort = db.session.get(Cohort, seeded_assessment["cohort_id"])
+        class_id = cohort.class_id
+
+        # Create a cohort in a different class
+        klass = db.session.get(Class, class_id)
+        class2 = Class(name="Class API3", year=2026, major_id=klass.major_id)
+        db.session.add(class2)
+        db.session.flush()
+        other_cohort = Cohort(name="Cohort API3", class_id=class2.id, internship_term="2026 Spring", is_active=True)
+        db.session.add(other_cohort)
+        db.session.commit()
+        other_cohort_id = other_cohort.id
+
+        advisor = create_user("api_class_adv", "faculty_advisor", "Advisor@Practicum1")
+        advisor_id = advisor.id
+
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    res = _create_delegation_via_api(client, app, admin_id, advisor_id, f"scope:class:{class_id}")
+    assert res.status_code == 200
+
+    client.get("/logout", follow_redirects=True)
+    client.post("/login", data={"username": "api_class_adv", "password": "Advisor@Practicum1"})
+
+    res_ok = client.get(f"/cohorts/{seeded_assessment['cohort_id']}", follow_redirects=False)
+    assert res_ok.status_code == 200, "Delegate with scope:class must access cohorts in that class"
+
+    res_denied = client.get(f"/cohorts/{other_cohort_id}", follow_redirects=False)
+    assert res_denied.status_code == 403, "Delegate with scope:class must NOT access cohorts in other class"
