@@ -72,6 +72,8 @@ def test_expired_session_redirects_to_login(client, admin_user):
     from datetime import datetime, timedelta, timezone
 
     client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    # Direct injection: no endpoint path for this state transition — last_active_at
+    # must be backdated to simulate an expired session; no public endpoint can do this.
     with client.session_transaction() as sess:
         expired_ts = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=35)).isoformat()
         sess["last_active_at"] = expired_ts
@@ -84,18 +86,15 @@ def test_expired_session_redirects_to_login(client, admin_user):
 
 def test_post_switch_role_changes_active_role(client, admin_user, app):
     """Authenticated user can switch to an extra granted role."""
-    from datetime import datetime, timezone
-
     client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
     with app.app_context():
         admin = User.query.filter_by(username="admin").first()
         grant = UserPermission(user_id=admin.id, permission="role:faculty_advisor")
         db.session.add(grant)
         db.session.commit()
-    with client.session_transaction() as sess:
-        sess["reauth_confirmed"] = {
-            "switch_role_submit": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-        }
+    # Trigger the reauth redirect so the action is stored in the session, then complete it
+    client.post("/switch-role", data={"role": "faculty_advisor"}, follow_redirects=False)
+    client.post("/reauth", data={"password": "Admin@Practicum1", "next_url": "/switch-role"}, follow_redirects=False)
     res = client.post("/switch-role", data={"role": "faculty_advisor"}, follow_redirects=False)
     assert res.status_code in (302, 204)
     with client.session_transaction() as sess:
@@ -104,13 +103,10 @@ def test_post_switch_role_changes_active_role(client, admin_user, app):
 
 def test_post_switch_role_to_unavailable_role_returns_403(client, admin_user):
     """User cannot switch to a role they are not granted."""
-    from datetime import datetime, timezone
-
     client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
-    with client.session_transaction() as sess:
-        sess["reauth_confirmed"] = {
-            "switch_role_submit": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-        }
+    # Trigger the reauth redirect for switch_role_submit, then complete reauth
+    client.post("/switch-role", data={"role": "student"}, follow_redirects=False)
+    client.post("/reauth", data={"password": "Admin@Practicum1", "next_url": "/switch-role"}, follow_redirects=False)
     res = client.post("/switch-role", data={"role": "student"})
     assert res.status_code == 403
 
@@ -131,6 +127,8 @@ def test_login_succeeds_after_captcha_with_correct_answer(client, app, admin_use
 
     question, answer = generate_captcha()
     assert question
+    # Direct injection: no endpoint path for this state transition — captcha_expected
+    # is server-side session state that cannot be retrieved via any public endpoint.
     with client.session_transaction() as sess:
         sess["captcha_expected"] = answer
 
@@ -162,18 +160,15 @@ def test_post_switch_role_without_reauth_redirects_to_reauth(client, admin_user,
 
 def test_post_switch_role_after_reauth_succeeds(client, admin_user, app):
     """POST /switch-role after valid re-authentication must succeed."""
-    from datetime import datetime, timezone
-
     client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
     with app.app_context():
         admin = User.query.filter_by(username="admin").first()
         grant = UserPermission(user_id=admin.id, permission="role:faculty_advisor")
         db.session.add(grant)
         db.session.commit()
-    with client.session_transaction() as sess:
-        sess["reauth_confirmed"] = {
-            "switch_role_submit": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-        }
+    # Trigger the reauth redirect so the action is stored in the session, then complete it
+    client.post("/switch-role", data={"role": "faculty_advisor"}, follow_redirects=False)
+    client.post("/reauth", data={"password": "Admin@Practicum1", "next_url": "/switch-role"}, follow_redirects=False)
     res = client.post("/switch-role", data={"role": "faculty_advisor"}, follow_redirects=False)
     assert res.status_code in (302, 204)
     with client.session_transaction() as sess:
@@ -209,13 +204,9 @@ def test_switched_role_limits_report_scope_to_assigned_cohorts(client, app, seed
         db.session.commit()
 
     client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
-    with client.session_transaction() as sess:
-        from datetime import datetime, timezone
-
-        sess.setdefault("reauth_confirmed", {})
-        sess["reauth_confirmed"]["switch_role_submit"] = (
-            datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-        )
+    # Trigger the reauth redirect for switch_role_submit, then complete it via /reauth
+    client.post("/switch-role", data={"role": "faculty_advisor"}, follow_redirects=False)
+    client.post("/reauth", data={"password": "Admin@Practicum1", "next_url": "/switch-role"}, follow_redirects=False)
 
     res = client.post("/switch-role", data={"role": "faculty_advisor"}, follow_redirects=True)
     assert res.status_code == 200

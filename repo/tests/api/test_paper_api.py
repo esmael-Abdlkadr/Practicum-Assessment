@@ -209,3 +209,69 @@ def test_remove_paper_question_writes_audit_log(client, app, seeded_assessment):
     with app.app_context():
         row = AuditLog.query.filter_by(action="PAPER_QUESTION_REMOVED", resource_id=str(paper_id)).first()
         assert row is not None
+
+
+# ---------------------------------------------------------------------------
+# New gap-filling tests: close paper, student available papers, create validation
+# ---------------------------------------------------------------------------
+
+def test_close_paper_returns_success(client, seeded_assessment):
+    """POST /admin/papers/<id>/close returns success fragment."""
+    login_admin(client)
+    paper_id = seeded_assessment["paper_id"]
+    res = client.post(f"/admin/papers/{paper_id}/close", headers={"HX-Request": "true"})
+    assert res.status_code == 200
+    assert b"closed" in res.data.lower()
+
+
+def test_close_paper_unauthenticated_redirects(client, seeded_assessment):
+    """Unauthenticated POST /admin/papers/<id>/close must redirect."""
+    paper_id = seeded_assessment["paper_id"]
+    res = client.post(f"/admin/papers/{paper_id}/close", follow_redirects=False)
+    assert res.status_code in (302, 401, 403)
+
+
+def test_student_available_papers_returns_json(client, seeded_assessment):
+    """Student GET /admin/papers/student/available returns JSON list with enrolled paper."""
+    client.post("/login", data={"username": "student1", "password": "Student@Practicum1"})
+    res = client.get("/admin/papers/student/available")
+    assert res.status_code == 200
+    assert res.content_type == "application/json"
+    data = res.get_json()
+    assert isinstance(data, list)
+    assert any(p["id"] == seeded_assessment["paper_id"] for p in data)
+
+
+def test_student_available_papers_excludes_other_cohort(client, seeded_assessment):
+    """Student 1 (cohort 1) must not see paper from cohort 2 in available list."""
+    client.post("/login", data={"username": "student1", "password": "Student@Practicum1"})
+    res = client.get("/admin/papers/student/available")
+    data = res.get_json()
+    paper2_id = seeded_assessment["paper2_id"]
+    assert all(p["id"] != paper2_id for p in data), "paper2 from cohort2 must not appear for student1"
+
+
+def test_student_available_papers_admin_forbidden(client, seeded_assessment):
+    """Admin (non-student) GET /admin/papers/student/available must return 403."""
+    login_admin(client)
+    res = client.get("/admin/papers/student/available")
+    assert res.status_code == 403
+
+
+def test_create_paper_missing_title_400(client, seeded_assessment):
+    """POST /admin/papers without title returns 400."""
+    login_admin(client)
+    cohort_id = seeded_assessment["cohort_id"]
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    res = client.post(
+        "/admin/papers",
+        data={
+            "title": "",
+            "cohort_id": cohort_id,
+            "available_from": (now - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"),
+            "available_until": (now + timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M"),
+        },
+        follow_redirects=False,
+    )
+    assert res.status_code in (400, 302)

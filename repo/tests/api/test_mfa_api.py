@@ -204,11 +204,9 @@ def test_mfa_disable_writes_audit_log(client, app, admin_user):
     totp = pyotp.TOTP(secret).now()
     client.post("/settings/mfa/verify-setup", data={"totp_code": totp}, follow_redirects=False)
 
-    with client.session_transaction() as sess:
-        from datetime import datetime, timezone
-
-        sess.setdefault("reauth_confirmed", {})
-        sess["reauth_confirmed"]["mfa_disable"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    # Trigger the reauth redirect for mfa_disable, then complete it via /reauth
+    client.post("/settings/mfa/disable", follow_redirects=False)
+    client.post("/reauth", data={"password": "Admin@Practicum1", "next_url": "/settings/mfa/disable"}, follow_redirects=False)
 
     res = client.post("/settings/mfa/disable", follow_redirects=False)
     assert res.status_code in (200, 302, 204)

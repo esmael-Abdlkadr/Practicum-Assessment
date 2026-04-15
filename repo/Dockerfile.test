@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+# System deps for Playwright + curl for healthchecks
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       curl wget gnupg ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt requirements-test.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-test.txt
+
+# Install Playwright browser — runs once at build time
+RUN python -m playwright install chromium --with-deps
+
+COPY . /app
+
+CMD ["bash", "run_tests.sh"]

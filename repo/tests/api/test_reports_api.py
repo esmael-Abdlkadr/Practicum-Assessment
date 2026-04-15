@@ -183,11 +183,6 @@ def test_export_difficulty_allowed_with_permission(client, app, seeded_assessmen
 
     client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
     paper_id = seeded_assessment["paper_id"]
-    with client.session_transaction() as sess:
-        sess.setdefault("reauth_confirmed", {})
-        from datetime import datetime, timezone
-
-        sess["reauth_confirmed"]["export_students"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     res = client.get(f"/reports/paper/{paper_id}/export/difficulty")
     assert res.status_code == 200
     assert "text/csv" in res.content_type
@@ -296,3 +291,53 @@ def test_switched_role_export_denied_403(client, app, seeded_assessment):
     paper_id = seeded_assessment["paper_id"]
     res = client.get(f"/reports/paper/{paper_id}/export/students", follow_redirects=False)
     assert res.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# New gap-filling tests: difficulty, students, cohort-comparison fragments
+# ---------------------------------------------------------------------------
+
+def test_get_reports_difficulty_fragment_200(client, seeded_assessment):
+    """Admin GET /reports/paper/<id>/difficulty returns 200 with difficulty data."""
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    pid = seeded_assessment["paper_id"]
+    res = client.get(f"/reports/paper/{pid}/difficulty")
+    assert res.status_code == 200
+
+
+def test_get_reports_difficulty_fragment_forbidden_unassigned(client, seeded_assessment):
+    """Unassigned advisor GET /reports/paper/paper2/difficulty returns 403."""
+    client.post("/login", data={"username": "advisor1", "password": "Advisor@Practicum1"})
+    pid = seeded_assessment["paper2_id"]
+    res = client.get(f"/reports/paper/{pid}/difficulty")
+    assert res.status_code == 403
+
+
+def test_get_reports_students_fragment_200(client, seeded_assessment):
+    """Admin GET /reports/paper/<id>/students returns 200."""
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    pid = seeded_assessment["paper_id"]
+    res = client.get(f"/reports/paper/{pid}/students")
+    assert res.status_code == 200
+
+
+def test_get_reports_cohort_comparison_fragment_200(client, seeded_assessment):
+    """Admin GET /reports/paper/<id>/cohort-comparison returns 200."""
+    client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
+    pid = seeded_assessment["paper_id"]
+    res = client.get(f"/reports/paper/{pid}/cohort-comparison")
+    assert res.status_code == 200
+
+
+def test_export_cohort_comparison_denied_without_permission(client, seeded_assessment):
+    """Advisor without report:export gets 403 on cohort-comparison export."""
+    client.post("/login", data={"username": "advisor1", "password": "Advisor@Practicum1"})
+    pid = seeded_assessment["paper_id"]
+    res = client.get(f"/reports/paper/{pid}/export/cohort-comparison")
+    assert res.status_code == 403
+
+
+def test_reports_student_unauthenticated_redirects(client):
+    """Unauthenticated GET /reports returns redirect."""
+    res = client.get("/reports", follow_redirects=False)
+    assert res.status_code in (302, 401, 403)

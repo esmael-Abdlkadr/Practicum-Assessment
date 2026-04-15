@@ -126,3 +126,60 @@ def test_quiz_result_for_other_student_forbidden(client, seeded_assessment, app)
     client.post("/login", data={"username": "student2", "password": "Student@Practicum1"})
     res = client.get(f"/quiz/{pid}/result/{aid}")
     assert res.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# New gap-filling tests: quiz_list, take_quiz, time_check
+# ---------------------------------------------------------------------------
+
+def test_quiz_list_shows_available_paper(client, seeded_assessment):
+    """Student GET /quiz returns page containing their enrolled paper."""
+    _login_student(client)
+    res = client.get("/quiz")
+    assert res.status_code == 200
+    assert "Paper 1" in res.get_data(as_text=True)
+
+
+def test_quiz_list_unauthenticated_redirects(client):
+    """Unauthenticated GET /quiz must redirect."""
+    res = client.get("/quiz", follow_redirects=False)
+    assert res.status_code in (302, 401, 403)
+
+
+def test_quiz_take_requires_active_attempt(client, seeded_assessment):
+    """GET /quiz/<id>/take with no attempt redirects to quiz list."""
+    _login_student(client)
+    pid = seeded_assessment["paper_id"]
+    res = client.get(f"/quiz/{pid}/take", follow_redirects=False)
+    assert res.status_code == 302
+
+
+def test_quiz_take_after_start_shows_questions(client, seeded_assessment):
+    """After starting, GET /quiz/<id>/take returns 200 with question stems."""
+    _login_student(client)
+    pid = seeded_assessment["paper_id"]
+    client.post(f"/quiz/{pid}/start")
+    res = client.get(f"/quiz/{pid}/take")
+    assert res.status_code == 200
+
+
+def test_quiz_time_check_returns_seconds(client, seeded_assessment):
+    """GET /quiz/<id>/time-check with active attempt returns JSON with seconds_remaining."""
+    _login_student(client)
+    pid = seeded_assessment["paper_id"]
+    client.post(f"/quiz/{pid}/start")
+    res = client.get(f"/quiz/{pid}/time-check")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "seconds_remaining" in data
+    assert isinstance(data["seconds_remaining"], (int, float))
+
+
+def test_quiz_time_check_no_attempt_returns_zero(client, seeded_assessment):
+    """GET /quiz/<id>/time-check with no active attempt returns seconds_remaining: 0."""
+    _login_student(client)
+    pid = seeded_assessment["paper_id"]
+    res = client.get(f"/quiz/{pid}/time-check")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["seconds_remaining"] == 0

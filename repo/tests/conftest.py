@@ -90,6 +90,20 @@ def auth_client(client, admin_user):
     return client
 
 
+def do_reauth(client, password="Admin@Practicum1", next_url="/dashboard"):
+    """Perform a real POST /reauth to confirm whatever action is currently pending.
+
+    Call this after a protected endpoint has redirected to /reauth (which stores
+    the required action name in the session).  The password must match the
+    currently-logged-in user.
+    """
+    client.post(
+        "/reauth",
+        data={"password": password, "next_url": next_url},
+        follow_redirects=False,
+    )
+
+
 @pytest.fixture
 def seeded_assessment(app):
     with app.app_context():

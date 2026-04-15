@@ -160,3 +160,53 @@ def test_student_cannot_access_grading_routes(client, app, seeded_assignment):
     _login_student(client)
     res = client.get("/assignments/grading")
     assert res.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# New gap-filling tests: admin close, grader detail, student detail
+# ---------------------------------------------------------------------------
+
+def test_admin_can_close_assignment(client, app, seeded_assignment):
+    """Admin POST /admin/assignments/<id>/close changes status to closed."""
+    _login_admin(client)
+    aid = seeded_assignment["assignment_id"]
+    res = client.post(f"/admin/assignments/{aid}/close", headers={"HX-Request": "true"})
+    assert res.status_code == 200
+    with app.app_context():
+        assert db.session.get(Assignment, aid).status == "closed"
+
+
+def test_admin_close_nonexistent_assignment_404(client, app, seeded_assignment):
+    """POST /admin/assignments/99999/close returns 404."""
+    _login_admin(client)
+    res = client.post("/admin/assignments/99999/close", headers={"HX-Request": "true"})
+    assert res.status_code == 404
+
+
+def test_grader_sees_submission_detail(client, app, seeded_assignment):
+    """Advisor GET /assignments/grading/<id> for a submitted assignment returns 200."""
+    submission_id = _ensure_submission_ready(app, seeded_assignment)
+    _login_advisor(client)
+    res = client.get(f"/assignments/grading/{submission_id}")
+    assert res.status_code == 200
+    assert "Final answer" in res.get_data(as_text=True)
+
+
+def test_student_sees_assignment_detail(client, app, seeded_assignment):
+    """Student GET /assignments/<id> returns their assignment detail page."""
+    _login_student(client)
+    aid = seeded_assignment["assignment_id"]
+    res = client.get(f"/assignments/{aid}")
+    assert res.status_code == 200
+    assert "Weekly Reflection" in res.get_data(as_text=True)
+
+
+def test_admin_create_assignment_missing_title_400(client, app, seeded_assignment):
+    """POST /admin/assignments without title returns 400."""
+    _login_admin(client)
+    res = client.post(
+        "/admin/assignments",
+        data={"title": "", "cohort_id": str(seeded_assignment["cohort_id"]), "max_score": "100"},
+        headers={"HX-Request": "true"},
+    )
+    assert res.status_code == 400

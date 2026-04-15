@@ -23,3 +23,19 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    profiles:
+      - test
+    environment:
+      SECRET_KEY: testing-secret-key
+      DATABASE_URL: sqlite:///data/test.db
+      SESSION_TYPE: filesystem
+      IN_DOCKER_TEST: "1"
+    volumes:
+      - ./data:/app/data
+      - ./flask_session:/app/flask_session
+    command: ["bash", "run_tests.sh"]

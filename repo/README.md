@@ -1,6 +1,8 @@
 # Practicum Assessment & Access Governance System
 
-Practicum Assessment & Access Governance System is an offline-first internship assessment platform for universities and training institutions. It provides secure local authentication, role-based access governance, assessment authoring and delivery, grading workflows, reporting, audit logging, and encryption/masking of sensitive student identifiers without any cloud dependency.
+**Type:** Full-stack web application (Python/Flask backend + HTMX/Jinja2 frontend)
+
+Offline-first internship assessment platform for universities and training institutions. Provides secure local authentication, role-based access governance, assessment authoring and delivery, grading workflows, reporting, audit logging, and encryption/masking of sensitive student identifiers — no cloud dependency required.
 
 ## Tech Stack
 
@@ -15,29 +17,18 @@ Practicum Assessment & Access Governance System is an offline-first internship a
 | Encryption | cryptography (Fernet) |
 | Containerization | Docker Compose |
 
-## Quick Start
+## Quick Start (Docker — recommended)
 
-1. Generate a secure secret key and start the app:
+No `.env` file required. The app auto-generates a secure key on first run.
 
 ```bash
-# Generate a strong SECRET_KEY (required for production, recommended for dev)
-export SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
-
 docker compose up --build
 ```
 
-> **Note:** If `SECRET_KEY` is not set, the app will auto-generate a per-install
-> random key and persist it to `data/.secret_key`. Known-weak/default keys are
-> rejected in non-test mode.
+## Access
 
-2. Open the web app:
-   - `http://localhost:5000`
-
-3. Health check:
-
-```bash
-curl http://localhost:5000/health
-```
+- Web app: `http://localhost:5000`
+- Health check: `curl http://localhost:5000/health`
 
 ## Demo Credentials
 
@@ -48,56 +39,22 @@ curl http://localhost:5000/health
 | Corporate Mentor | mentor1 | Mentor@Practicum1 |
 | Student | student1 | Student@Practicum1 |
 
-### Reset demo accounts
+## Running Tests
+
+### Docker (required)
+
+```bash
+bash run_tests_docker.sh
+```
+
+Builds the test image (with Playwright chromium) and runs unit + API + HTTP integration + E2E suites inside Docker.
+
+## Resetting Demo Data
 
 If demo credentials stop working (the bundled database is mutable), run:
 
-> Note: A `.env` file with `DATABASE_URL` and `SECRET_KEY` must exist
-> in the repo root before running seed or development commands locally.
-> Copy `.env.example` to `.env` and adjust if needed.
-
 ```bash
-# Docker
 docker compose exec web python -c "from app import create_app; from app.seed import seed_db; app=create_app(); ctx=app.app_context(); ctx.push(); seed_db(); print('Done')"
-
-# Local (without Docker)
-FLASK_APP=app python -c "from app import create_app; from app.seed import seed_db; app=create_app('development'); ctx=app.app_context(); ctx.push(); seed_db(); print('Done')"
-```
-
-This resets all demo users to their documented passwords without deleting any data.
-
-## Service URLs
-
-- Web App: `http://localhost:5000`
-- Health Check: `http://localhost:5000/health`
-
-## Running Tests
-
-```bash
-bash run_tests.sh
-```
-
-`bash run_tests.sh` — runs all tests locally (no Docker required). Requires the `.venv` to be activated or dependencies installed.
-
-## Local Development (Without Docker)
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate          # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-export FLASK_APP=app
-export SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
-flask run
-```
-
-> If `SECRET_KEY` is not set or is a known-weak value, the app auto-generates
-> a random per-install key and persists it to `data/.secret_key`.
-
-Run tests locally:
-
-```bash
-python -m pytest tests/unit/ -q
-python -m pytest tests/api/ -q
 ```
 
 ## Reset Database
@@ -117,20 +74,18 @@ docker compose up --build
 | `FLASK_ENV` | Flask environment | `development` |
 | `SECRET_KEY` | Flask session secret key | `change-me...` |
 | `DATABASE_URL` | SQLAlchemy DB URL | `sqlite:///data/practicum.db` |
-| `FERNET_KEY` | Optional Fernet key (if empty, generated to `data/fernet.key`) | `<base64-key>` |
+| `FERNET_KEY` | Optional Fernet key (auto-generated to `data/fernet.key` if empty) | `<base64-key>` |
 | `SESSION_TYPE` | Session backend | `filesystem` |
 | `SESSION_LIFETIME_MINUTES` | Session timeout | `30` |
 | `AUDIT_RETENTION_DAYS` | Audit log retention in days (default 3 years) | `1095` |
 
 ## Production Deployment
 
-Before deploying to production:
-
 1. Set `SECRET_KEY` to a cryptographically random string of at least 32 characters:
    ```bash
    python -c "import secrets; print(secrets.token_hex(32))"
    ```
-2. Set `FLASK_ENV=production` (never run with `development` in production)
+2. Set `FLASK_ENV=production`
 3. Generate and securely store a `FERNET_KEY` (or let the app auto-generate to `data/fernet.key` and back up that file)
 4. Serve behind a reverse proxy (nginx/caddy) with HTTPS enabled
 5. Restrict filesystem access to `data/` directory (contains database and encryption keys)
