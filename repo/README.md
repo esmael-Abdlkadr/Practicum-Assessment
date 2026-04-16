@@ -22,6 +22,12 @@ Offline-first internship assessment platform for universities and training insti
 No `.env` file required. The app auto-generates a secure key on first run.
 
 ```bash
+docker-compose up
+```
+
+If your Docker setup uses the newer Compose plugin command, this equivalent command also works:
+
+```bash
 docker compose up --build
 ```
 
@@ -29,6 +35,14 @@ docker compose up --build
 
 - Web app: `http://localhost:5000`
 - Health check: `curl http://localhost:5000/health`
+
+## Architecture Overview
+
+- `app/routes/`: Flask HTTP route handlers for auth, organization management, quiz, grading, reports, admin, and settings.
+- `app/services/`: business logic layer (authentication, RBAC, grading, reports, attempts, encryption, audit logging).
+- `app/models/`: SQLAlchemy entities for users, org structure, papers/questions, attempts, grading, assignments, and audit events.
+- `app/templates/`: Jinja2 + HTMX UI views and partials.
+- `data/`: persistent SQLite database and generated encryption key material.
 
 ## Demo Credentials
 
@@ -44,10 +58,25 @@ docker compose up --build
 ### Docker (required)
 
 ```bash
-bash run_tests_docker.sh
+bash run_tests.sh
 ```
 
 Builds the test image (with Playwright chromium) and runs unit + API + HTTP integration + E2E suites inside Docker.
+
+`tests_run.sh` is a compatibility wrapper that delegates to `run_tests.sh`.
+
+## Verification Flow
+
+After startup, use this checklist to verify core features end-to-end:
+
+1. Open `http://localhost:5000/login` and sign in with the demo Department Admin account.
+2. Confirm redirect to `/dashboard`.
+3. Go to organization management (`/admin/org/schools`) and verify admin pages load.
+4. Go to question bank (`/admin/questions`) and create one sample question.
+5. Go to papers (`/admin/papers`) and verify a paper can be created/published.
+6. Log in as `student1` and open `/quiz` to confirm student assessment visibility.
+7. Submit one quiz attempt, then log in as `advisor1` and open `/grading` to confirm grading view.
+8. Open `/reports` as admin/advisor and verify report pages and CSV exports are reachable based on role permissions.
 
 ## Resetting Demo Data
 

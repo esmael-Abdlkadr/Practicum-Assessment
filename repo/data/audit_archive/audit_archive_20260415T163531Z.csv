@@ -1,0 +1,2 @@
+id,timestamp,actor_id,actor_username,action,resource_type,resource_id,old_value,new_value,ip_address,device_fingerprint,extra
+1,2023-01-01T16:35:31.928328,,,OLD,,,,,,,

@@ -9,6 +9,4 @@ __pycache__/
 *.pyc
 .env
 .venv/
-.tmp/
-ITERATION_*.md
-OPENCODE_MASTER_PROMPT.md
+
