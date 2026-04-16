@@ -7,9 +7,6 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Wrapper-level temp
-.tmp/
-
 # Repo-local env/temp/runtime artifacts
 repo/.env
 repo/.venv/
