@@ -73,18 +73,17 @@ def test_session_lifetime_fallback_reads_session_lifetime_minutes_env(monkeypatc
     assert session_service._session_lifetime() == timedelta(minutes=5)
 
 
-def test_expired_session_redirects_to_login(client, admin_user):
+def test_expired_session_redirects_to_login(client, admin_user, monkeypatch):
     """Stale last_active_at must cause redirect to /login?reason=expired."""
-    from datetime import timedelta
+    from datetime import datetime, timedelta, timezone
 
-    app = client.application
-    previous_lifetime = app.config.get("PERMANENT_SESSION_LIFETIME")
-    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(seconds=-1)
+    from app.services import session_service
+
+    base_now = datetime.now(timezone.utc).replace(tzinfo=None)
+    monkeypatch.setattr(session_service, "_utcnow", lambda: base_now)
     client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
-    try:
-        res = client.get("/dashboard", follow_redirects=False)
-    finally:
-        app.config["PERMANENT_SESSION_LIFETIME"] = previous_lifetime
+    monkeypatch.setattr(session_service, "_utcnow", lambda: base_now + timedelta(minutes=31))
+    res = client.get("/dashboard", follow_redirects=False)
 
     assert res.status_code == 302
     loc = res.headers.get("Location", "")
