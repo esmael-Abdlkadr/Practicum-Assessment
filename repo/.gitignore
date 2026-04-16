@@ -1,5 +1,8 @@
 data/fernet.key
+data/.secret_key
+data/audit_archive/
 data/*.db
+.coverage
 .pytest_cache/
 :memory:
 *.db-shm
