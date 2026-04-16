@@ -13,6 +13,13 @@ def login_admin(client):
 # School
 # ---------------------------------------------------------------------------
 
+def test_get_schools_page_returns_200(client, admin_user):
+    login_admin(client)
+    res = client.get("/admin/org/schools")
+    assert res.status_code == 200
+    assert b"Schools" in res.data
+
+
 def test_create_school_success(client, admin_user):
     login_admin(client)
     res = client.post(

@@ -16,30 +16,46 @@ def test_mfa_setup_page_returns_200(client, admin_user):
 
 def test_mfa_setup_generates_secret(client, app, admin_user):
     _login(client)
-    client.post("/settings/mfa/setup")
-    # After the fix, setup no longer writes to DB — secret lives in session only
-    with client.session_transaction() as sess:
-        assert sess.get("mfa_setup_secret") is not None
+    res = client.post("/settings/mfa/setup")
+    assert res.status_code == 200
+    body = res.get_data(as_text=True)
+    assert "<svg" in body
+    assert 'name="totp_code"' in body
 
 
 def test_mfa_verify_setup_with_valid_totp(client, app, admin_user):
+    with app.app_context():
+        setup_secret = pyotp.random_base32()
+        u = User.query.filter_by(username="admin").first()
+        u.mfa_secret = setup_secret
+        u.mfa_enabled = False
+        db.session.commit()
+
     _login(client)
-    client.post("/settings/mfa/setup")
-    # Secret is now only in session, not DB
-    with client.session_transaction() as sess:
-        secret = sess.get("mfa_setup_secret")
-    assert secret is not None
-    totp = pyotp.TOTP(secret).now()
+    totp = pyotp.TOTP(setup_secret).now()
     res = client.post("/settings/mfa/verify-setup", data={"totp_code": totp}, follow_redirects=False)
     assert res.status_code in (200, 302, 204)
+    with app.app_context():
+        u = User.query.filter_by(username="admin").first()
+        assert u.mfa_enabled is True
 
 
 def test_mfa_verify_setup_with_invalid_totp_returns_error(client, app, admin_user):
+    with app.app_context():
+        setup_secret = pyotp.random_base32()
+        u = User.query.filter_by(username="admin").first()
+        u.mfa_secret = setup_secret
+        u.mfa_enabled = False
+        db.session.commit()
+
     _login(client)
-    client.post("/settings/mfa/setup")
     res = client.post("/settings/mfa/verify-setup", data={"totp_code": "000000"}, headers={"HX-Request": "true"})
     body = res.get_data(as_text=True)
-    assert res.status_code in (200, 400) or "invalid" in body.lower() or "incorrect" in body.lower()
+    assert res.status_code in (200, 400)
+    assert "invalid" in body.lower()
+    with app.app_context():
+        u = User.query.filter_by(username="admin").first()
+        assert u.mfa_enabled is False
 
 
 def test_mfa_disable_requires_reauth(client, app, admin_user):
@@ -69,9 +85,11 @@ def test_login_with_mfa_enabled_requires_totp(client, app, admin_user):
     assert "/login/mfa" in location or resp.status_code in (200, 302), (
         "MFA-enabled login should redirect to /login/mfa"
     )
-    with client.session_transaction() as sess:
-        assert "user_id" not in sess
-        assert sess.get("mfa_pending_user_id") is not None
+    mfa_page = client.get("/login/mfa", follow_redirects=False)
+    assert mfa_page.status_code == 200
+    dashboard = client.get("/dashboard", follow_redirects=False)
+    assert dashboard.status_code == 302
+    assert "/login" in dashboard.headers.get("Location", "")
 
 
 def test_login_with_mfa_valid_totp_completes_login(client, app, admin_user):
@@ -125,21 +143,23 @@ def test_login_with_mfa_invalid_totp_returns_error(client, app, admin_user):
     )
     location = resp.headers.get("Location", "")
     assert "/dashboard" not in location
-    with client.session_transaction() as sess:
-        assert "user_id" not in sess
-        assert sess.get("mfa_pending_user_id") is not None
+    assert "invalid mfa code" in resp.get_data(as_text=True).lower()
+    mfa_page = client.get("/login/mfa", follow_redirects=False)
+    assert mfa_page.status_code == 200
 
 
 def test_mfa_enable_writes_audit_log(client, app, admin_user):
     from app.models.audit_log import AuditLog
 
+    with app.app_context():
+        setup_secret = pyotp.random_base32()
+        u = User.query.filter_by(username="admin").first()
+        u.mfa_secret = setup_secret
+        u.mfa_enabled = False
+        db.session.commit()
+
     _login(client)
-    client.post("/settings/mfa/setup")
-    # Secret is now only in session, not DB
-    with client.session_transaction() as sess:
-        secret = sess.get("mfa_setup_secret")
-    assert secret is not None
-    totp = pyotp.TOTP(secret).now()
+    totp = pyotp.TOTP(setup_secret).now()
     res = client.post("/settings/mfa/verify-setup", data={"totp_code": totp}, follow_redirects=False)
     assert res.status_code in (200, 302, 204)
 
@@ -195,13 +215,15 @@ def test_mfa_setup_stores_pending_secret_only_in_session(client, app, admin_user
 def test_mfa_disable_writes_audit_log(client, app, admin_user):
     from app.models.audit_log import AuditLog
 
+    with app.app_context():
+        setup_secret = pyotp.random_base32()
+        u = User.query.filter_by(username="admin").first()
+        u.mfa_secret = setup_secret
+        u.mfa_enabled = False
+        db.session.commit()
+
     _login(client)
-    client.post("/settings/mfa/setup")
-    # Secret is now only in session, not DB
-    with client.session_transaction() as sess:
-        secret = sess.get("mfa_setup_secret")
-    assert secret is not None
-    totp = pyotp.TOTP(secret).now()
+    totp = pyotp.TOTP(setup_secret).now()
     client.post("/settings/mfa/verify-setup", data={"totp_code": totp}, follow_redirects=False)
 
     # Trigger the reauth redirect for mfa_disable, then complete it via /reauth

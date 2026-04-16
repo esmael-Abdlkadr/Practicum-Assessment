@@ -17,6 +17,12 @@ def test_client_error_log_accepts_beacon(client):
     assert resp.status_code == 204
 
 
+def test_health_endpoint_returns_ok_status(client):
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.get_json() == {"status": "ok", "db": "connected", "version": "1.0.0"}
+
+
 def test_client_error_log_tolerates_empty_body(client):
     """Beacon with empty body must not crash - returns 204."""
     resp = client.post("/client-error-log", data="", content_type="text/plain")

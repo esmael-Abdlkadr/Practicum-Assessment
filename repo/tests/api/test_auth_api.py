@@ -12,6 +12,12 @@ def login_as(client, username):
     client.post("/login", data={"username": username, "password": password_map.get(username, "Admin@Practicum1")})
 
 
+def test_get_login_page_returns_200(client):
+    res = client.get("/login")
+    assert res.status_code == 200
+    assert "Sign in to your account" in res.get_data(as_text=True)
+
+
 def test_post_login_valid_redirects_dashboard(client, admin_user):
     res = client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"}, follow_redirects=False)
     assert res.status_code == 302
@@ -69,15 +75,17 @@ def test_session_lifetime_fallback_reads_session_lifetime_minutes_env(monkeypatc
 
 def test_expired_session_redirects_to_login(client, admin_user):
     """Stale last_active_at must cause redirect to /login?reason=expired."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import timedelta
 
+    app = client.application
+    previous_lifetime = app.config.get("PERMANENT_SESSION_LIFETIME")
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(seconds=-1)
     client.post("/login", data={"username": "admin", "password": "Admin@Practicum1"})
-    # Direct injection: no endpoint path for this state transition — last_active_at
-    # must be backdated to simulate an expired session; no public endpoint can do this.
-    with client.session_transaction() as sess:
-        expired_ts = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=35)).isoformat()
-        sess["last_active_at"] = expired_ts
-    res = client.get("/dashboard", follow_redirects=False)
+    try:
+        res = client.get("/dashboard", follow_redirects=False)
+    finally:
+        app.config["PERMANENT_SESSION_LIFETIME"] = previous_lifetime
+
     assert res.status_code == 302
     loc = res.headers.get("Location", "")
     assert "/login" in loc
@@ -97,8 +105,9 @@ def test_post_switch_role_changes_active_role(client, admin_user, app):
     client.post("/reauth", data={"password": "Admin@Practicum1", "next_url": "/switch-role"}, follow_redirects=False)
     res = client.post("/switch-role", data={"role": "faculty_advisor"}, follow_redirects=False)
     assert res.status_code in (302, 204)
-    with client.session_transaction() as sess:
-        assert sess.get("active_role") == "faculty_advisor"
+    role_page = client.get("/switch-role")
+    assert role_page.status_code == 200
+    assert "Current role: <strong>faculty_advisor</strong>" in role_page.get_data(as_text=True)
 
 
 def test_post_switch_role_to_unavailable_role_returns_403(client, admin_user):
@@ -120,17 +129,20 @@ def test_get_switch_role_page_returns_200(client, admin_user):
 def test_login_succeeds_after_captcha_with_correct_answer(client, app, admin_user):
     """After 3 failed logins (CAPTCHA triggered), submitting the correct CAPTCHA
     and correct password must succeed and redirect to /dashboard."""
-    from app.services.auth_service import generate_captcha
+    import re
 
     for _ in range(3):
         client.post("/login", data={"username": "admin", "password": "Wrong123!"})
 
-    question, answer = generate_captcha()
-    assert question
-    # Direct injection: no endpoint path for this state transition — captcha_expected
-    # is server-side session state that cannot be retrieved via any public endpoint.
-    with client.session_transaction() as sess:
-        sess["captcha_expected"] = answer
+    challenge = client.post(
+        "/login",
+        data={"username": "admin", "password": "Wrong123!"},
+        headers={"HX-Request": "true"},
+    )
+    challenge_body = challenge.get_data(as_text=True)
+    match = re.search(r"Security check:\s*(\d+)\s*\+\s*(\d+)\s*=\s*\?", challenge_body)
+    assert match is not None
+    answer = str(int(match.group(1)) + int(match.group(2)))
 
     res = client.post(
         "/login",
@@ -171,8 +183,9 @@ def test_post_switch_role_after_reauth_succeeds(client, admin_user, app):
     client.post("/reauth", data={"password": "Admin@Practicum1", "next_url": "/switch-role"}, follow_redirects=False)
     res = client.post("/switch-role", data={"role": "faculty_advisor"}, follow_redirects=False)
     assert res.status_code in (302, 204)
-    with client.session_transaction() as sess:
-        assert sess.get("active_role") == "faculty_advisor"
+    role_page = client.get("/switch-role")
+    assert role_page.status_code == 200
+    assert "Current role: <strong>faculty_advisor</strong>" in role_page.get_data(as_text=True)
 
 
 def test_dashboard_shows_admin_section_for_dept_admin(client, dept_admin):
